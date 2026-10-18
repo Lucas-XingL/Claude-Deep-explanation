@@ -433,7 +433,7 @@ window.UNDERBODY = (SCENE, SHOT) => {
       });
       const wx = bx(M.kgf(WGT)), y1 = yb + (52 + 2 * 88 + 54) * U;
       g.save(); g.globalAlpha = ca * clamp(q.c1 * 2); g.strokeStyle = PAL.ink; g.lineWidth = 2 * U; g.setLineDash([7 * U, 6 * U]); g.beginPath();
-      for (let i = 0; i < 3; i++) { const by = yb + (52 + i * 88 + 34) * U; g.moveTo(wx, by - 20 * U); g.lineTo(wx, i === 2 ? y1 : by + 20 * U); } g.stroke(); g.restore();
+      for (let i = 0; i < 3; i++) { const by = yb + (52 + i * 88 + 34) * U; g.moveTo(wx, by - 14 * U); g.lineTo(wx, i === 2 ? y1 : by + 18 * U); } g.stroke(); g.restore();
       text("车重", wx, y1 + 18 * U, SZ.small, { align: "center", color: PAL.inkSoft, alpha: ca * clamp(q.c1 * 2) });
     }
   }

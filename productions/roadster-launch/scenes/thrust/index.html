@@ -113,9 +113,9 @@ function valve(P, open, alpha) {                                   // valve symb
   const [x, y] = toScreen(P, SP.rearValve), d = dirToScreen(P, [1, 0]), a = Math.atan2(d[1], d[0]);
   g.save(); g.globalAlpha = alpha; g.translate(x, y); g.rotate(a);
   g.fillStyle = "#F4F1EA"; g.strokeStyle = INK; g.lineWidth = 3;
-  g.beginPath(); g.moveTo(-16, -11); g.lineTo(16, 11); g.lineTo(16, -11); g.lineTo(-16, 11); g.closePath(); g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(-20, -14); g.lineTo(20, 14); g.lineTo(20, -14); g.lineTo(-20, 14); g.closePath(); g.fill(); g.stroke();
   g.rotate(open * Math.PI / 2); g.strokeStyle = open > 0.5 ? ACCENT : INK; g.lineWidth = 5;
-  g.beginPath(); g.moveTo(0, -18); g.lineTo(0, 18); g.stroke();
+  g.beginPath(); g.moveTo(0, -22); g.lineTo(0, 22); g.stroke();
   g.restore();
 }
 function ring(x, y, r, alpha) { if (alpha <= 0) return; g.save(); g.globalAlpha = alpha; g.strokeStyle = ACCENT; g.lineWidth = 3; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke(); g.restore(); }
@@ -164,13 +164,14 @@ function s09Geometry(P, al) {
     g.beginPath(); g.moveTo(C[0], C[1]); g.lineTo(C[0] + (foot[0] - C[0]) * al.armGrow, C[1] + (foot[1] - C[1]) * al.armGrow); g.stroke();
     for (const Q of [C, foot]) { g.beginPath(); g.moveTo(Q[0] - n[0], Q[1] - n[1]); g.lineTo(Q[0] + n[0], Q[1] + n[1]); g.stroke(); }
     g.restore();
-    const mx = (C[0] + foot[0]) / 2, my = (C[1] + foot[1]) / 2, side = u[1] > 0 ? -1 : 1;
-    const lx = mx - 60, ly = my + side * 62 + (side > 0 ? 40 : -40);
-    text("力臂", lx, ly, 30, { alpha: al.armLbl });
-    badge("示意", lx + 72, ly, SOFT, al.armLbl);
+    // label on the roof side of the car (below it upside down, above it upright)
+    const roof = dirToScreen(P, [0, -1]), mx = (C[0] + foot[0]) / 2 + roof[0] * 118, my = (C[1] + foot[1]) / 2 + roof[1] * 118;
+    text("力臂", mx - 64, my, 30, { alpha: al.armLbl });
+    badge("示意", mx - 26, my, SOFT, al.armLbl);
   }
   cgMark(g, C[0], C[1], 14, al.cg);
-  text("重心", C[0] - 92, C[1] - 40, 30, { alpha: al.cgLbl });
+  leader(C[0] + 4, C[1] - 104, C[0] + 1, C[1] - 20, al.cgLbl);
+  text("重心", C[0] + 14, C[1] - 124, 30, { alpha: al.cgLbl });
   turnArrow(C[0], C[1], al.turn, al.turnA);
 }
 const END09 = { axis: 0.75, axisGrow: 1, axisLbl: 0, arm: 1, armGrow: 1, armLbl: 1, cg: 1, cgLbl: 1, turn: 1, turnA: 1 };
@@ -179,13 +180,11 @@ const END09 = { axis: 0.75, axisGrow: 1, axisLbl: 0, arm: 1, armGrow: 1, armLbl:
 function drawS09(t) {
   const P = carPose(t), L15 = T.line("L015");
   ground(0);
-  trail(0, t, null, 0.55 * (1 - seg(t, A.tLand, A.tLand + 0.5)));
   const after = jetsAndThrust(t, P, A.jets, (j) => (j.name === "rear" ? 240 : 150));
   drawCar(g, carImg, P);
   // L014: valve, gas, thrust
   const kValve = atWord(t, "L014", "阀门") * (1 - seg(t, A.tOff + 0.6, A.tOff + 1.2));
   const open = eo(seg(t, A.tOpen - 0.05, A.tOpen + 0.15)) * (1 - seg(t, A.tOff, A.tOff + 0.2));
-  valve(P, open, kValve);
   const V = toScreen(P, SP.rearValve), E = toScreen(P, SP.rearExit);
   leader(V[0], V[1] - 60, V[0], V[1] - 22, kValve); text("阀门", V[0], V[1] - 84, 30, { align: "center", alpha: kValve });
   const kGas = atWord(t, "L014", "气体") * (1 - seg(t, A.tOff, A.tOff + 0.5));
@@ -200,15 +199,17 @@ function drawS09(t) {
   const kNozL = kNoz * (1 - seg(t, A.tSpin + 0.6, A.tSpin + 1.1));
   text("喷口", N[0] + 40, N[1] - 50, 30, { alpha: kNozL });
   const wCG = T.wordAt("L015", "重心");
+  const rest = 1 - seg(t, A.tSpin + 0.25, A.tSpin + 0.55) + seg(t, A.tStop, A.tStop + 0.4);   // labels rest while it turns
   const al = {
     axis: kNoz * (1 - 0.25 * seg(t, A.tLand, A.tLand + 0.5)), axisGrow: eio(seg(t, T.wordAt("L015", "不对") - 0.1, T.wordAt("L015", "不对") + 0.6)),
     axisLbl: atWord(t, "L015", "不对") * (1 - seg(t, A.tSpin + 0.6, A.tSpin + 1.1)),
-    cg: atWord(t, "L015", "重心", 0.35), cgLbl: atWord(t, "L015", "重心"),
-    arm: seg(t, wCG + 0.3, wCG + 0.5), armGrow: eio(seg(t, wCG + 0.3, wCG + 0.8)), armLbl: eo(seg(t, wCG + 0.6, wCG + 1.0)),
+    cg: atWord(t, "L015", "重心", 0.35), cgLbl: atWord(t, "L015", "重心") * rest,
+    arm: seg(t, wCG + 0.3, wCG + 0.5), armGrow: eio(seg(t, wCG + 0.3, wCG + 0.8)), armLbl: eo(seg(t, wCG + 0.6, wCG + 1.0)) * rest,
     turn: eio(seg(t, T.wordAt("L015", "转") - 0.1, T.wordAt("L015", "转") + 0.7)), turnA: 1,
   };
   s09Geometry(P, al);
   after(t);
+  valve(P, open, kValve);
   // the stop: a short burst from the front down nozzle
   const F = toScreen(P, SP.downF), kStop = onOff(t, A.tStop - A.d, A.tStop, 0.15);
   text("反向喷，停转", F[0] + 30, F[1] + 54, 26, { color: ACCENT, alpha: kStop });
