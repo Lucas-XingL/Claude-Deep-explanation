@@ -62,7 +62,7 @@ const smax0 = (z, w) => (z <= -w ? 0 : z >= w ? z : (z + w) * (z + w) / (4 * w))
 function camX(t) {
   if (!IS10) return 0;
   const end = B.pose(DURATION + 5).x - 3.5;                      // stop with the car right of centre
-  const c = smax0(B.pose(t).x - 1.58, 1.5);                      // follow once the car passes 1.58 m
+  const c = smax0(B.pose(t).x - 2.4, 1.5);                       // follow once the car passes 2.4 m (screen x ≈ 1250)
   return end - smax0(end - c, 1.5);
 }
 const scr = (x, y, cx) => [CX + (x - cx) * S, YG - y * S];
@@ -105,7 +105,8 @@ function ground(cx) {
 function trail(from, to, poseAt, alpha) {                         // dotted path of the CG
   if (alpha <= 0 || to <= from) return;
   g.save(); g.globalAlpha = alpha; g.fillStyle = SOFT;
-  for (let s = from; s <= to; s += 0.12) { const p = carPose(s), cx = camX(to), [X, Y] = scr(p.x, p.y, cx); g.beginPath(); g.arc(X, Y, 3, 0, Math.PI * 2); g.fill(); }
+  const cx = camX(to);
+  for (let s = from; s <= to; s += 0.025) { const p = IS10 ? B.pose(s) : A.pose(s), [X, Y] = scr(p.x, p.y, cx); g.beginPath(); g.arc(X, Y, 2.4, 0, Math.PI * 2); g.fill(); }
   g.restore();
 }
 function valve(P, open, alpha) {                                   // valve symbol on the rear line
@@ -167,7 +168,7 @@ function s09Geometry(P, al) {
     // label on the roof side of the car (below it upside down, above it upright)
     const roof = dirToScreen(P, [0, -1]), mx = (C[0] + foot[0]) / 2 + roof[0] * 118, my = (C[1] + foot[1]) / 2 + roof[1] * 118;
     text("力臂", mx - 64, my, 30, { alpha: al.armLbl });
-    badge("示意", mx - 26, my, SOFT, al.armLbl);
+    badge("示意", mx + 6, my, SOFT, al.armLbl);
   }
   cgMark(g, C[0], C[1], 14, al.cg);
   leader(C[0] + 4, C[1] - 104, C[0] + 1, C[1] - 20, al.cgLbl);
@@ -218,9 +219,13 @@ function drawS09(t) {
 }
 
 // ---------------------------------------------------------------- S10
-const KN = 4.78;                                       // px per kN on the bar chart
+const KN = 4.2;                                        // px per kN on the bar chart
 const BX = 270, BY1 = 236, BY2 = 336;
 function bars(t) {
+  const kP = atWord(t, "L016", "推力");                // a clearing on the paper under the chart
+  if (kP > 0) { g.save(); g.globalAlpha = kP; const grd = g.createRadialGradient(520, 300, 60, 520, 300, 470);
+    grd.addColorStop(0, "rgba(244,241,234,.95)"); grd.addColorStop(0.75, "rgba(244,241,234,.9)"); grd.addColorStop(1, "rgba(244,241,234,0)");
+    g.fillStyle = grd; g.fillRect(90, 120, 860, 350); g.restore(); }
   const Tc = M.thrustClaim / 1000, Wk = M.weight() / 1000;
   const kT = atWord(t, "L016", "推力"), gT = eio(seg(t, T.wordAt("L016", "八万") - 0.25, T.wordAt("L016", "八万") + 0.35));
   const kW = atWord(t, "L016", "车重"), gW = eio(seg(t, T.wordAt("L016", "车重"), T.wordAt("L016", "一万七千") + 0.2));
