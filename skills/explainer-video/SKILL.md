@@ -96,6 +96,7 @@ compatibility: 任何能执行 shell、读写文件、能看图片的 agent（Cl
 2. **风格帧**：建好母版资产，给关键镜头出静帧，至少开场（真实画面和 reveal 后的模型各一张）和核心机制镜头各一张，用到的每条路线至少一张。
    - 2D 场景：`node scripts/capture_frames.mjs scenes/<场景>/index.html --timeline plan/est/timeline.json --shot S03 --stills 2,9 --out plan/stills/S03`
    - anatomy 镜头：`bash scripts/anatomy/render_shot.sh <工程> <shot.mjs> plan/est/timeline.json S02 plan/stills/S02/clip.mp4 --stills-only`
+   - HyperFrames 镜头：`bash scripts/hyperframes/render_shot.sh scenes/S04 plan/est/timeline.json S04 scenes/S04/clip.mp4 --stills-only --stills-at 2,9 --stills-out plan/stills/S04`
    - 把选中的画面写进分镜的 `frames` 字段（`[{"image": "plan/stills/S03/t_2.00.png", "caption": "…"}]`）。没有画面的镜头，方案页会显示它的 `visual` 描述。
    - 主体模型很大（Epic 级）时，可以先用粗模出风格帧，画面说明里写“粗模”，确认后再加细节。
 3. **试听（推荐）**：只生成 2–3 句配音（`tts_lines.py … --only L001,L002,L003`），确认音色和语速。
@@ -118,7 +119,8 @@ compatibility: 任何能执行 shell、读写文件、能看图片的 agent（Cl
 按 `references/visual-routes.md` 制作，anatomy 路线见 `references/anatomy-route.md`。
 - **标了 `risks` 的镜头先预检**：关键动作看前中后三帧，跨句的连续镜头看句子交界两侧（`directing.md` 第 8 节）。
 - **2D 场景**（图解、推导、受力、读数）：从 `templates/scene-paper.html` 改（纸面风，和 anatomy 镜头同一个外观），用 `scripts/capture_frames.mjs --timeline … --shot …` 渲染。说到某个词时要发生的动作用 `atWord(t, "L007", "风扇")`。
-- **渲染命令可以放心重跑**：`capture_frames.mjs` 和 `render_shot.sh` 会跳过输入没变的镜头；改了一句口播，就把全部渲染命令再跑一遍，只有受影响的镜头会重渲。`capture_frames.mjs` 每次还会乱序复查几帧，场景依赖上一帧时会报错。
+- **信息动效**（数据卡、宣称与证实对照、标题、图表、地图底子）：从 `templates/hyperframes/` 改，用 `scripts/hyperframes/render_shot.sh` 渲染（先跑一次 `scripts/hyperframes/setup.sh <proj>`）。它渲染前会检查越界、对比度和字幕区，组件库有现成的图表和转场可以改来用。见 `references/hyperframes-route.md`。
+- **渲染命令可以放心重跑**：`capture_frames.mjs` 和两个 `render_shot.sh` 会跳过输入没变的镜头；改了一句口播，就把全部渲染命令再跑一遍，只有受影响的镜头会重渲。`capture_frames.mjs` 每次还会乱序复查几帧，场景依赖上一帧时会报错。
 - **anatomy 镜头**：每个镜头一个 `shots/<id>.mjs`（模板 `templates/anatomy-shot.mjs`），用 `scripts/anatomy/render_shot.sh` 构建、并行渲染、编码，并检查时长。模型少于 40 个零件时它会停下（`--min-parts`）。
 - **开场**：`scripts/footage.sh` 截取、裁切、加署名，并导出最后一帧和线稿；`templates/scene-reveal.html` 做“真实画面 → 线稿 → 模型”的转场。
 - 其他渲染器（Remotion、Manim、Blender 等）的输出同样放到 `scenes/<id>/clip.mp4`。
@@ -146,6 +148,7 @@ python3 scripts/check_sync.py <proj>
 | 用户确认之前 | `make_plan.py` | 没给用户看方案就开始配音和渲染 |
 | 每个 2D 镜头 | `capture_frames.mjs` | 画面依赖上一帧状态的场景（乱序复查，退出码 3） |
 | 每个 anatomy 镜头 | `render_shot.sh` | 零件太少的模型；片段长度和时间轴对不上；没看过的成片帧（导出检查帧） |
+| 每个 HyperFrames 镜头 | `hyperframes/render_shot.sh` | 运行错误；元素越界；压进字幕区的内容；对比度不够的文字；片段长度和时间轴对不上 |
 | 合成之后 | `contact_sheet.sh` | 黑帧、超过 4 秒的定格、响度不对 |
 | 合成之后 | `check_sync.py` | 口播在往下讲、画面却没有变化的句子（有意停留的镜头在分镜里写 `hold` 和理由） |
 
@@ -217,11 +220,15 @@ python3 scripts/check_sync.py <proj>
 | `scripts/anatomy/setup_shots.mjs` | 让 anatomy-reveal 工程支持按镜头构建 |
 | `scripts/anatomy/render_shot.sh` | 构建、并行渲染、编码一个 anatomy 镜头，并检查时长、导出检查帧；输入没变就跳过 |
 | `scripts/anatomy/sprite.sh` | 从 anatomy 模型抠出透明背景的贴图 |
+| `scripts/hyperframes/setup.sh` | 装 HyperFrames、它的 Chrome、本地字体和 GSAP（每个工程一次） |
+| `scripts/hyperframes/render_shot.sh` | 构建、检查（越界、对比度、字幕区）、渲染一个 HyperFrames 镜头，核对时长、导出检查帧；输入没变就跳过 |
+| `scripts/hyperframes/build_shot.mjs` | 给 HyperFrames 合成写入镜头时间（`shot.js`、`@L004:词` 换算成秒） |
 | `templates/plan.html` | 方案页的页面模板（由 `make_plan.py` 填数据） |
 | `templates/scene-reveal.html` | 开场转场：真实画面 → 线稿 → 我们的模型 |
 | `templates/model.js` | 数值模型 |
 | `templates/scene-paper.html`、`paper.css` | 纸面风 2D 场景 |
 | `templates/scene.html` | 通用 Canvas 场景 |
+| `templates/hyperframes/` | HyperFrames 信息动效镜头（纸面和深色两套主题；卡片、逐字标题、数字滚动随口播出现） |
 | `templates/anatomy-shot.mjs` | anatomy 镜头的关键帧 |
 | `templates/sfx.py` | 由模型驱动的音效 |
 | `templates/research-brief.md` | 研究子代理的任务说明 |
@@ -240,6 +247,7 @@ python3 scripts/check_sync.py <proj>
 | `references/audio.md` | 第 6（试听）、7 步：配音、时间轴、字幕、音乐、音效 |
 | `references/visual-routes.md` | 第 6、8 步：每条视觉路线的做法 |
 | `references/anatomy-route.md` | 用 R1 剖解路线时：接入流程、建模经验、坑 |
+| `references/hyperframes-route.md` | 做信息动效、图表、地图底子时：什么时候用、安装、合成约定、组件库、检查、实测、坑 |
 | `references/render.md` | 第 8–9 步：渲染约定、各渲染器、合成、竖版剪辑 |
 | `references/verify.md` | 第 6、10 步：方案页和成片的检查清单 |
 | `references/footage.md` | 第 1、5、8 步：开场的真实画面怎么拿、怎么处理、拿不到时怎么还原 |

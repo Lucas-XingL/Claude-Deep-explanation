@@ -79,6 +79,7 @@ skills/explainer-video/
     visual-routes.md       R1–R9 视觉路线的做法、提示词结构和常见坑
     footage.md             开场的真实画面：怎么拿、怎么处理、拿不到时怎么还原
     anatomy-route.md       剖解路线和 Roadster 的完整方案
+    hyperframes-route.md   信息动效、图表、地图底子：HyperFrames 的安装、合成约定、组件库、检查、实测
     render.md              逐帧渲染约定、各渲染器命令、合成、竖版剪辑
     verify.md              方案页和成片的检查清单、交付说明
     rights.md              素材、肖像、商标
@@ -86,7 +87,8 @@ skills/explainer-video/
                            scene-paper.html 和 paper.css（纸面风 2D 场景）、model.js（数值模型）、
                            anatomy-shot.mjs（anatomy 镜头关键帧）、sfx.py（模型驱动的音效）、
                            research-brief.md（研究子代理的任务说明）、plan.html（方案页模板）、
-                           scene-reveal.html（开场转场：真实画面 → 线稿 → 模型）
+                           scene-reveal.html（开场转场：真实画面 → 线稿 → 模型）、
+                           hyperframes/（HyperFrames 信息动效镜头，纸面和深色两套主题）
   scripts/
     tts_lines.py           分句配音（自定义命令、edge-tts 或占位音）；edge-tts 同时存逐词时间
     timeline.py            分镜 + 脚本 + 配音 → timeline.json（带逐词时间）、narration.wav、subs.srt
@@ -98,6 +100,8 @@ skills/explainer-video/
     anatomy/setup_shots.mjs   让 anatomy-reveal 工程支持按镜头构建
     anatomy/render_shot.sh    一个 anatomy 镜头：构建、并行渲染、编码、检查时长、导出检查帧；输入没变就跳过
     anatomy/sprite.sh         从 anatomy 模型抠出透明背景的贴图，给 2D 场景用
+    hyperframes/setup.sh      装 HyperFrames、它的 Chrome、本地中文字体和 GSAP
+    hyperframes/render_shot.sh  一个 HyperFrames 镜头：写入口播时间、检查越界/对比度/字幕区、渲染、核对时长；输入没变就跳过
     contact_sheet.sh       接触表，检查黑帧、定格和响度
     lint_project.py        结构检查：编号、等级、来源、口径、归属词、镜头字段和母版资产是否对得上
     make_plan.py           生成方案页 plan/index.html，用户确认后再做全片
@@ -121,4 +125,5 @@ skills/explainer-video/
 
 - 代码动画的整体思路，以及提示词结构（风格 → 元素 → 运镜 → 禁止项）、产品片美术规则、音频先行、librosa 卡点、“精确内容交给代码，连续动作交给视频模型”等做法，参考了小红书博主“卡尔的AI沃茨”的视频《AI做代码动画动效大片的零基础终极教程》。
 - 导演规则（问题、主线、回答；每镜的画面配方；关系和画法；常见画面错误和受力检查；风格帧、高风险镜头预检和倒查）、研究规则（来源读到什么程度、同源转载只算一次、网页内容不当指令、人物和企业题的几条规矩）、素材登记的派生链，以及分项记录检查结论、“未做”不写成通过等做法，参考了 deep-explainer-video（“万物拆解”）skill 0.8.0 预览版的思路；逐词对齐、按结构合成配乐、渲染缓存和乱序复查，以及“一次只改一个变量”“公式放在直觉之后”“参考视频怎么用”几条导演规则，参考了它的 0.9.0 预览版。这里只借鉴了思路，文字和脚本都是重新写的，没有复制它的代码。
+- 信息动效路线用 [HyperFrames](https://github.com/heygen-com/hyperframes)（HeyGen，Apache-2.0）渲染：`scripts/hyperframes/setup.sh` 从 npm 安装它，本仓库没有复制它的代码；它的组件库按需装进各个工程。
 - 剖解路线建立在 [anatomy](https://github.com/wheresryan22/anatomy) 和 [anatomy-reveal](https://github.com/annnguyentt/anatomy-reveal-skill) 两个 skill 的方法之上（均为 MIT 协议），本仓库没有复制它们的代码。

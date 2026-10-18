@@ -12,6 +12,10 @@ out/
 # Downloaded and conformed real material (often copyrighted): research/assets.md records how to fetch it again.
 **/raw/
 **/scenes/_shared/opening/
+# HyperFrames: shot.js is written from the timeline; fonts and GSAP are copied in by scripts/hyperframes/setup.sh
+**/scenes/*/shot.js
+**/scenes/_shared/fonts/
+**/scenes/_shared/vendor/
 # Render cache records (capture_frames.mjs, render_shot.sh)
 *.inputs.json
 *.inputs.sha256

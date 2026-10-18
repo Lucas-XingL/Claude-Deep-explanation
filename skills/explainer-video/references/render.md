@@ -29,7 +29,7 @@
 - 用 fetch 读取 `file://` 下的文件。数据要内联，或者放在旁边的 `.js` 文件里，以 `window.DATA = …` 的形式加载；
 - 视频元素自动播放。真实视频素材请用 ffmpeg 处理（见 R7）。
 
-**缓存**：`capture_frames.mjs` 在 `clip.mp4` 旁边写一个 `clip.mp4.inputs.json`，记下这次渲染实际读取的本地文件（场景、`model.js`、样式、图片……）、镜头时间和选项。下次这些都没变，就直接跳过；改了任何一个就重新渲染。`render_shot.sh` 对 anatomy 镜头也一样（`clip.mp4.inputs.sha256`）。所以改了一句口播之后，可以放心地把所有镜头的渲染命令再跑一遍，只有时间变了的镜头会真正重渲。要强制重渲，加 `--force`。
+**缓存**：`capture_frames.mjs` 在 `clip.mp4` 旁边写一个 `clip.mp4.inputs.json`，记下这次渲染实际读取的本地文件（场景、`model.js`、样式、图片……）、镜头时间和选项。下次这些都没变，就直接跳过；改了任何一个就重新渲染。`render_shot.sh` 对 anatomy 镜头也一样（`clip.mp4.inputs.sha256`）。HyperFrames 镜头的 `scripts/hyperframes/render_shot.sh` 也一样。所以改了一句口播之后，可以放心地把所有镜头的渲染命令再跑一遍，只有时间变了的镜头会真正重渲。要强制重渲，加 `--force`。
 
 ## 3. 渲染命令
 
@@ -51,7 +51,7 @@ node scripts/capture_frames.mjs scenes/S05/index.html --timeline audio/vertical/
 | 工具 | 命令 |
 |---|---|
 | Remotion | `npx remotion render <CompositionId> scenes/S05/clip.mp4 --props='{"timeline":…}'` |
-| HyperFrames | 用它自己的渲染命令（以它的文档为准），输出 mp4 |
+| HyperFrames | `bash scripts/hyperframes/render_shot.sh scenes/S05 audio/timeline.json S05 scenes/S05/clip.mp4`：先检查（越界、对比度、字幕区）再渲染，输入没变就跳过（见 `hyperframes-route.md`） |
 | Manim | `manim -qh --fps 30 -r 1920,1080 scene.py S05`，再把 `media/videos/...` 拷贝过来 |
 | anatomy-reveal | `bash scripts/anatomy/render_shot.sh <工程> <工程>/shots/S05.mjs audio/timeline.json S05 scenes/S05/clip.mp4 --jobs 3`（见 `anatomy-route.md`） |
 | Blender | `blender -b scene.blend -o //frames/f_#### -a`，然后 `ffmpeg -framerate 30 -i frames/f_%04d.png -c:v libx264 -pix_fmt yuv420p clip.mp4` |

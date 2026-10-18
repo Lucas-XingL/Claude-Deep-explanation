@@ -28,6 +28,7 @@
 - [ ] 2D 场景里出现的主体，用的是从 3D 模型抠出的贴图（`sprite.sh`），和 3D 镜头是同一个东西
 - [ ] 正式渲染完的片段：看 `render_shot.sh` 导出的 `clip.mp4.check.png`，确认画的是你的物体和你的机位。静帧预览对，不代表正式渲染也对
 - [ ] `capture_frames.mjs` 报了“seek check: ok”（乱序复查通过）；报错的场景改成只由 t 决定画面
+- [ ] HyperFrames 镜头：`hyperframes/render_shot.sh` 的检查是 “Check passed”，没有用 `--no-check` 或 `--check-args "--no-contrast"` 交付；从组件库装进来的模块，演示用的数字、标签、英文标题、Google 字体都换掉了
 - [ ] 机器在动的镜头：运动速度和模型一致，比如秒针每秒走 8 小步、四轮每分钟一圈；慢放倍数写在角落的读数里
 - [ ] 分镜里标了 `risks` 的镜头，按 `directing.md` 第 8 节在指定时刻出帧检查过：关键动作看前中后，跨句连续看句子交界的两侧
 - [ ] 画了力的镜头，按 `directing.md` 第 6 节逐条过了一遍

@@ -44,9 +44,10 @@ anatomy 镜头讲“它长什么样、怎么拆开”，原理、受力、推导
 
 - **适合**：数据卡、宣称与证实对照、文字重点、产品界面、标题、章节卡。
 - **工具**：
-  - 简单的镜头直接从 `templates/scene.html` 改（Canvas 2D 或 HTML/CSS），用 `capture_frames.mjs` 渲染；
-  - 多镜头、组件化的工程用 **Remotion**（`npx create-video@latest`，渲染命令 `npx remotion render <id> out.mp4`）。时长和帧率从 `timeline.json` 读取；
-  - 复刻参考视频：把参考片交给模型，让它“把这段视频反向拆解成 HyperFrames（或 Remotion）代码”。HyperFrames 是一个从网页做视频的工具。复刻的是节奏和构图，不能照搬原片的素材和品牌。
+  - **HyperFrames**（默认）：玻璃或纸面卡片、逐字上浮的标题、随口播滚动的数字、光扫、图表。从 `templates/hyperframes/` 改，用 `scripts/hyperframes/render_shot.sh` 检查和渲染；它的组件库有现成的图表、转场、文字特效可以改来用。见 `hyperframes-route.md`；
+  - 简单的镜头也可以直接从 `templates/scene.html` 改（Canvas 2D 或 HTML/CSS），用 `capture_frames.mjs` 渲染；
+  - 已经有 Remotion 工程时也可以用 **Remotion**（`npx create-video@latest`，渲染命令 `npx remotion render <id> out.mp4`）。时长和帧率从 `timeline.json` 读取。注意它的许可：个人和小团队免费，超过一定规模的公司要买授权；
+  - 复刻参考视频：把参考片交给模型，让它“把这段视频反向拆解成 HyperFrames 代码”，再套进 `templates/hyperframes/` 的约定（时间来自口播、字幕区留空）。复刻的是节奏和构图，不能照搬原片的素材和品牌。
 - **美术规则**（来自对常见 AI 产品片的总结）：
   - 不要用“居中大字 + 渐变背景 + 所有东西一起淡入”这种模板；
   - 主色最多三种；
@@ -74,6 +75,7 @@ anatomy 镜头讲“它长什么样、怎么拆开”，原理、受力、推导
   - Canvas 2D 或 SVG，配合 d3-geo 投影（`d3.geoNaturalEarth1()` 等）；
   - 地图底图用公共领域数据，比如 Natural Earth，也可以用 world-atlas 的 TopoJSON；
   - 本地 HTML 不能用 fetch 读取 file:// 文件，所以把数据内联进 HTML，或者在 HTML 旁边放一个 `.js` 文件，以 `window.DATA = …` 的形式加载。
+- **现成底子**：HyperFrames 组件库的 `world-map`、`us-map-flow`、`nyc-paris-flight` 可以改来用（换数据、字体、颜色，见 `hyperframes-route.md` 第 6 节）。
 - **同步**：路线的延伸进度绑定到口播句子上（`onLine(t, "L012")`），“说到哪，线就画到哪”。
 - **常见坑**：地图上的文字太多；投影把关键区域挤得太小（应该先放大到相关区域）。
 
