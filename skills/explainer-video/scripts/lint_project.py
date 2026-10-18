@@ -67,7 +67,8 @@ def read_facts(path):
     for n, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         cells = [c.strip() for c in raw.strip().strip("|").split("|")]
         if cells and cells[0] == "编号":
-            col = {name: i for i, name in enumerate(cells)}
+            # "来源（标题、机构、日期、链接）" is the 来源 column: match headers without the note in brackets
+            col = {re.sub(r"\s*[（(].*$", "", name): i for i, name in enumerate(cells)}
             continue
         if not cells or not re.fullmatch(r"F\d+", cells[0]):
             continue

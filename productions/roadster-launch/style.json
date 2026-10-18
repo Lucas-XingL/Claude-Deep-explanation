@@ -1,0 +1,64 @@
+{
+  "_note": "全片统一的视觉规范。复制到工程根目录后改。场景代码从这里抄值，不要各自发明颜色和字号。",
+  "name": "paper",
+  "palette": {
+    "paper": "#F4F1EA",
+    "ink": "#1D1C1A",
+    "inkSoft": "#6B675F",
+    "rule": "#D8D2C4",
+    "accent": "#E4572E",
+    "second": "#2E86AB",
+    "_rule": "主色最多三种：paper、ink 加一个 accent。second 只用于需要区分两组东西的时候"
+  },
+  "dark": {
+    "paper": "#141412",
+    "ink": "#ECE8DF",
+    "inkSoft": "#9A958B",
+    "rule": "#34322E",
+    "accent": "#FF6B3D",
+    "second": "#5BB3D9"
+  },
+  "fonts": {
+    "sans": "\"Noto Sans CJK SC\",\"Source Han Sans SC\",\"PingFang SC\",\"Microsoft YaHei\",\"WenQuanYi Zen Hei\",sans-serif",
+    "serif": "\"Noto Serif CJK SC\",\"Source Han Serif SC\",\"Songti SC\",serif",
+    "mono": "\"JetBrains Mono\",\"SFMono-Regular\",Menlo,monospace"
+  },
+  "type": {
+    "_unit": "以 1080 为基准，场景里乘以 U = min(宽, 高) / 1080",
+    "title": 96,
+    "heading": 64,
+    "body": 44,
+    "label": 30,
+    "small": 22,
+    "maxCharsOnScreen": 15
+  },
+  "safe": {
+    "_note": "上下左右的安全边距（占画面的比例）。字幕区域在底部，场景里的文字不要放进去",
+    "landscape": { "x": 0.07, "top": 0.08, "bottomForSubs": 0.16 },
+    "portrait": { "x": 0.08, "top": 0.12, "bottomForSubs": 0.22 }
+  },
+  "badges": {
+    "A": null,
+    "B": { "label": "据报道", "color": "inkSoft" },
+    "C": { "label": "宣称", "color": "accent" },
+    "D": { "label": "传闻", "color": "accent" },
+    "E": { "label": "估算", "color": "second", "showAssumptions": true },
+    "R": { "label": "复原想象", "color": "second" },
+    "S": { "label": "模拟", "color": "second" },
+    "G": { "label": "AI 生成画面", "color": "inkSoft" },
+    "G_bg": { "label": "AI 生成背景", "color": "inkSoft", "_note": "纯装饰的生成背景：角落小标，不放大" },
+    "I": null
+  },
+  "motion": {
+    "_note": "动作要平静、有缓动。同一种动作在全片里用同样的时长和缓动",
+    "enter": { "duration": 0.6, "ease": "out" },
+    "move": { "duration": 0.9, "ease": "inOut" },
+    "highlightLead": 0.15,
+    "minHold": 1.2
+  },
+  "subtitles": {
+    "font": "Noto Sans CJK SC",
+    "maxCharsLandscape": 16,
+    "maxCharsPortrait": 12
+  }
+}

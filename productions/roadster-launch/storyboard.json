@@ -1,0 +1,464 @@
+{
+  "meta": {
+    "title": "特斯拉新 Roadster：倒挂、翻身、飞跃，是怎么做到的？",
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "style": "style.json",
+    "question": "发布会上它倒挂、翻身、飞过一排车，是怎么做到的？它真的会飞吗？",
+    "throughline": "发布会演示了什么 → 风扇把车底抽成低压，大气把车按向路面，倒挂也能贴住 → 一离开路面吸力就没了 → 高压气体反向喷出，推力不靠轮胎：翻身、飞跃 → 气只够喷几秒",
+    "answer": "倒挂靠风扇吸力，翻身和飞跃靠几秒钟的冷气推力。离持续飞行还很远，推力和气量都还只是工程师的说法。"
+  },
+  "assets": {
+    "opening": "官方视频《The Ramp》里车倒挂在坡道顶上的几秒（research/assets.md）；scenes/_shared/opening/ 下的 clip.mp4、last.png、edges.png",
+    "ramp2d": "纸面风侧视坡道：弯曲坡道和车的侧视贴图（scenes/_shared/car_side.png，从 anatomy 模型抠出），scenes/ramp/",
+    "car3d": "anatomy 剖解跑车，104 个零件，风扇、裙边、气瓶、喷口都能动（scenes/_shared/car/）",
+    "cards": "HyperFrames 纸面主题信息卡（templates/hyperframes/），scenes/S03/、scenes/S12/",
+    "underbody": "纸面风车底剖面：车身、裙边、风扇、路面或坡道顶；车底压强、大气压箭头、车重箭头、吸力条都读 model.js，scenes/underbody/",
+    "thrust2d": "纸面风侧视推力图：同一张车贴图、气瓶、喷口、喷流、反作用力、重心和力臂；推力条和车重条读 model.js，scenes/thrust/",
+    "gas2d": "纸面风气量账：气瓶读数随时间下降、悬停计时器、每牛每秒耗气，读 model.js，scenes/gas/"
+  },
+  "shots": [
+    {
+      "id": "S01",
+      "section": "钩子",
+      "lines": [
+        "L001"
+      ],
+      "pre": 0.3,
+      "post": 0.2,
+      "route": "R7",
+      "asset": "opening",
+      "source": "scenes/_shared/opening/clip.mp4",
+      "credit": "画面：特斯拉官方视频《The Ramp》，2026-10-16",
+      "visual": "官方视频：车沿弯曲坡道开上去，倒挂在坡道顶上",
+      "camera": "原片机位，不加推拉",
+      "onscreen": [
+        "来源署名"
+      ],
+      "evidence": [
+        "F01",
+        "F02"
+      ],
+      "new_info": "这是什么东西、发生了什么：一辆车倒挂在坡道顶上",
+      "subject": "倒挂的车",
+      "relation": "证据链",
+      "change": "车开上坡道，车头朝下",
+      "result": "最后一帧停在车倒挂的那一刻，交给下一镜的线稿",
+      "transition_in": "cut"
+    },
+    {
+      "id": "S02",
+      "section": "钩子",
+      "lines": [
+        "L002"
+      ],
+      "pre": 0.2,
+      "post": 0.6,
+      "route": "R7",
+      "asset": "opening",
+      "source": "scenes/S02/index.html",
+      "credit": "画面：特斯拉官方视频《The Ramp》，2026-10-16",
+      "visual": "真实画面定格 → 描出线稿 → 换成纸面风的坡道和我们的车（倒挂），问题出现在空白处",
+      "camera": "固定机位，线稿出现时极慢推近",
+      "onscreen": [
+        "来源署名",
+        "它为什么掉不下来？"
+      ],
+      "evidence": [
+        "F02"
+      ],
+      "new_info": "提出全片的问题",
+      "subject": "倒挂在坡道顶上的车",
+      "relation": "证据链",
+      "change": "照片变线稿，线稿变成纸面上的车和坡道",
+      "result": "问题“它为什么掉不下来？”停在倒挂的车旁边",
+      "risks": [
+        "continuity"
+      ],
+      "accents": [
+        "L002:掉不下来"
+      ],
+      "transition_in": "match"
+    },
+    {
+      "id": "S03",
+      "section": "先分清楚",
+      "lines": [
+        "L003",
+        "L004",
+        "L005"
+      ],
+      "pre": 0.3,
+      "post": 0.5,
+      "route": "R2",
+      "asset": "cards",
+      "source": "scenes/S03/index.html",
+      "visual": "纸面主题信息卡：左栏“演示过”三张卡随词弹出，中间 0.81 秒数字滚动并挂“特斯拉自己计时”，右栏“只是宣称”两张卡（推力、能飞多久）挂“宣称”角标",
+      "camera": "缓慢推近，网格漂移",
+      "onscreen": [
+        "演示过",
+        "只是宣称",
+        "0.81 s",
+        "特斯拉自己计时",
+        "宣称"
+      ],
+      "evidence": [
+        "F02",
+        "F04",
+        "F08"
+      ],
+      "new_info": "哪些是演示过的，哪些只是宣称",
+      "subject": "演示与宣称两栏",
+      "relation": "对比",
+      "change": "卡片按口播逐张出现，数字从 0 滚到 0.81",
+      "result": "两栏对照留在画面上：左边是看到的，右边是听说的",
+      "accents": [
+        "L004:零点八一"
+      ]
+    },
+    {
+      "id": "S04",
+      "section": "风扇吸地",
+      "lines": [
+        "L006"
+      ],
+      "pre": 0.3,
+      "post": 0.4,
+      "route": "R1",
+      "asset": "car3d",
+      "source": "scenes/S04/clip.mp4",
+      "visual": "anatomy 跑车，车尾低机位：四个风扇转起来，裙边放下贴住地面；说到“风扇”时风扇高亮，说到“裙边”时裙边高亮",
+      "camera": "从车尾斜后方低处出发 → 推近车尾 → 停在能同时看到风扇和裙边的位置",
+      "onscreen": [
+        "4 个风扇",
+        "每个约 20 kW",
+        "宣称",
+        "裙边"
+      ],
+      "evidence": [
+        "F09",
+        "F26",
+        "F14"
+      ],
+      "new_info": "倒挂靠的是什么零件：车尾风扇和车底裙边",
+      "subject": "车尾四个风扇和两侧裙边",
+      "relation": "结构",
+      "change": "风扇转速从 0 升起，裙边放下",
+      "result": "裙边贴到地面，车底被围成一个封闭的空间",
+      "risks": [
+        "image_visibility"
+      ]
+    },
+    {
+      "id": "S05",
+      "section": "风扇吸地",
+      "lines": [
+        "L007"
+      ],
+      "pre": 0.2,
+      "post": 0.4,
+      "route": "R3",
+      "asset": "underbody",
+      "source": "scenes/underbody/index.html",
+      "visual": "纸面车底剖面：风扇把车底的空气点抽向车尾，车底空气点变稀，车底压强读数下降；车顶一排大气压箭头不变，车底箭头变短，差值合成一个向下的力",
+      "camera": "固定机位",
+      "onscreen": [
+        "车底气压",
+        "大气压"
+      ],
+      "evidence": [
+        "F09"
+      ],
+      "new_info": "吸力从哪来：车底气压比外面低，大气把车按下去",
+      "subject": "车底被裙边围住的空气",
+      "relation": "因果链",
+      "change": "风扇抽气，车底空气点变稀，车底箭头变短",
+      "result": "上下箭头的差值合成一根向下的“吸力”箭头，压在车上",
+      "risks": [
+        "key_action"
+      ]
+    },
+    {
+      "id": "S06",
+      "section": "风扇吸地",
+      "lines": [
+        "L008",
+        "L009"
+      ],
+      "pre": 0.2,
+      "post": 0.5,
+      "route": "R3",
+      "asset": "underbody",
+      "source": "scenes/underbody/index.html",
+      "visual": "同一个剖面整体翻转 180°，车倒挂在顶上：车重箭头向下 16.7 kN，吸力箭头指向顶面并增长到超过车重；读数显示所需车底负压 ≈ 2.8 kPa ≈ 大气压的 3%",
+      "camera": "整个剖面绕中心翻转 180°（连续，不切），之后固定",
+      "onscreen": [
+        "车重 1,700 kg",
+        "宣称",
+        "所需负压 ≈ 大气压 3%",
+        "估算：车底面积按 6 m²"
+      ],
+      "evidence": [
+        "F14",
+        "F23",
+        "F21"
+      ],
+      "new_info": "倒挂的条件：吸力要大过车重；所需的气压差只有大约百分之三",
+      "subject": "倒挂的车和两根力的箭头",
+      "relation": "受力",
+      "change": "剖面翻转，吸力箭头增长并越过车重箭头",
+      "result": "吸力箭头比车重长，路面对轮胎的力指向车身，车贴在顶上；读数停在约 3%",
+      "risks": [
+        "key_action",
+        "continuity"
+      ],
+      "accents": [
+        "L009:百分之三"
+      ]
+    },
+    {
+      "id": "S07",
+      "section": "风扇吸地",
+      "lines": [
+        "L010",
+        "L011"
+      ],
+      "pre": 0.2,
+      "post": 0.6,
+      "route": "R3",
+      "asset": "underbody",
+      "source": "scenes/underbody/index.html",
+      "visual": "接着 S06 的倒挂状态：右侧三根条依次长出——倒挂所需 1,700 kgf、工程师说 2,500 kgf（宣称）、屏幕显示约 4,700 kgf（据报道）；然后车离开坡道顶面往下落，裙边和顶面之间出现缝隙，空气点涌入车底，车底压强回到大气压，吸力箭头缩到零，读数变灰，写“吸力模型不再适用”",
+      "camera": "固定机位，车往下掉时画面轻微跟随",
+      "onscreen": [
+        "倒挂所需 1,700",
+        "工程师说 2,500",
+        "屏幕显示 ≈4,700",
+        "宣称",
+        "据报道",
+        "吸力模型不再适用"
+      ],
+      "evidence": [
+        "F10",
+        "F11",
+        "F21"
+      ],
+      "new_info": "宣称的吸力比需要的大不少；但一离开路面吸力就没了",
+      "subject": "车底的缝隙和吸力箭头",
+      "relation": "因果链",
+      "change": "三根条依次长出；车离开顶面，裙边下出现缝隙，空气点涌入",
+      "result": "吸力箭头缩到零，读数变灰，写“吸力模型不再适用”，车开始下落（交给推进器一段）",
+      "risks": [
+        "key_action",
+        "continuity"
+      ]
+    },
+    {
+      "id": "S08",
+      "section": "推进器",
+      "lines": [
+        "L012",
+        "L013"
+      ],
+      "pre": 0.2,
+      "post": 0.5,
+      "route": "R1",
+      "asset": "car3d",
+      "source": "scenes/S08/clip.mp4",
+      "visual": "anatomy 跑车拆开：车身外壳抬起，露出座椅后的碳纤维气瓶和车尾的喷口；说到“气瓶”时气瓶高亮，读数写额定压力",
+      "camera": "斜后上方的全景 → 拆开 → 推近气瓶和喷口",
+      "onscreen": [
+        "碳纤维高压气瓶",
+        "额定约 690 bar",
+        "≈ 胎压 300 倍",
+        "宣称",
+        "估算"
+      ],
+      "evidence": [
+        "F02",
+        "F12",
+        "F22"
+      ],
+      "new_info": "翻身的力来自车里的高压气瓶和喷口",
+      "subject": "气瓶和喷口",
+      "relation": "结构",
+      "change": "车身拆开，气瓶和喷口露出并高亮",
+      "result": "气瓶和喷口之间的管路看得见：气从瓶里到喷口",
+      "risks": [
+        "image_visibility"
+      ]
+    },
+    {
+      "id": "S09",
+      "section": "推进器",
+      "lines": [
+        "L014",
+        "L015"
+      ],
+      "pre": 0.2,
+      "post": 0.5,
+      "route": "R3",
+      "asset": "thrust2d",
+      "source": "scenes/thrust/index.html",
+      "visual": "纸面侧视：阀门打开，气体从喷口高速喷出（喷流粒子），同时车上出现反方向的推力箭头；然后画出重心和推力作用线，作用线不过重心，力臂标出，车绕重心转起来（空中翻身）",
+      "camera": "固定机位，车转动时画面不动",
+      "onscreen": [
+        "喷流",
+        "推力",
+        "重心",
+        "力臂"
+      ],
+      "evidence": [
+        "F12"
+      ],
+      "new_info": "推力怎么来：气往一边喷，车被反方向推；作用线不过重心，车就转",
+      "subject": "喷口、喷流和推力箭头",
+      "relation": "受力",
+      "change": "阀门打开，喷流出现，推力箭头出现；作用线偏离重心，车开始旋转",
+      "result": "车绕重心转过半圈，力臂和转动方向的弧线箭头留在画面上",
+      "risks": [
+        "key_action"
+      ]
+    },
+    {
+      "id": "S10",
+      "section": "推进器",
+      "lines": [
+        "L016",
+        "L017"
+      ],
+      "pre": 0.2,
+      "post": 0.6,
+      "route": "R3",
+      "asset": "thrust2d",
+      "source": "scenes/thrust/index.html",
+      "visual": "同一个侧视场景：左侧两根条——推力超过 80 kN（宣称）和车重约 17 kN；推力条越过车重条后，车离地，从一排车的剪影上方跳过去并落地",
+      "camera": "固定机位，车跳起时画面跟着车平移",
+      "onscreen": [
+        "推力 > 80 kN",
+        "宣称",
+        "车重 ≈ 17 kN"
+      ],
+      "evidence": [
+        "F13",
+        "F23",
+        "F02"
+      ],
+      "new_info": "推力比车重大好几倍，所以能离地飞过一排车",
+      "subject": "推力条、车重条和离地的车",
+      "relation": "对比",
+      "change": "推力条长过车重条，车离地，飞过一排车",
+      "result": "车落在车队另一侧；两根条的比值留在画面上",
+      "risks": [
+        "continuity"
+      ],
+      "accents": [
+        "L016:八万"
+      ]
+    },
+    {
+      "id": "S11",
+      "section": "能飞多久",
+      "lines": [
+        "L018",
+        "L019",
+        "L020"
+      ],
+      "pre": 0.2,
+      "post": 0.6,
+      "route": "R3",
+      "asset": "gas2d",
+      "source": "scenes/gas/index.html",
+      "visual": "纸面气量账：左边气瓶，里面的气量读数从 250 kg 往下掉；中间一行“每牛每秒约 1.5 克”；右边悬停计时器跑到约 10 秒时气瓶空了；然后在 5 秒处插一个“工程师说：一次充气约 5 秒”的标记",
+      "camera": "固定机位",
+      "onscreen": [
+        "每牛每秒 ≈ 1.5 克",
+        "250 kg",
+        "宣称",
+        "理想悬停 ≈ 10 秒",
+        "估算",
+        "工程师说 ≈ 5 秒"
+      ],
+      "evidence": [
+        "F15",
+        "F24",
+        "F25",
+        "F18"
+      ],
+      "new_info": "气是有限的：就算全拿来悬停也只能撑十秒左右",
+      "subject": "气瓶读数和计时器",
+      "relation": "变量关系",
+      "change": "气瓶读数随时间下降，计时器往上走",
+      "result": "气瓶空的时候计时器停在约 10 秒；5 秒处的工程师标记",
+      "accents": [
+        "L019:十秒"
+      ]
+    },
+    {
+      "id": "S12",
+      "section": "还不知道的",
+      "lines": [
+        "L021",
+        "L022"
+      ],
+      "pre": 0.2,
+      "post": 0.6,
+      "route": "R2",
+      "asset": "cards",
+      "source": "scenes/S12/index.html",
+      "visual": "纸面主题信息卡：先是一张引语卡“不符合航空器的定义 —— 美国联邦航空局”（据报道）；然后三张“还没公布”的卡依次出现：量产车多重、电池多大、补满一次气要多久",
+      "camera": "缓慢推近",
+      "onscreen": [
+        "不算航空器",
+        "据报道",
+        "还没公布",
+        "量产车多重",
+        "电池多大",
+        "补满一次气要多久"
+      ],
+      "evidence": [
+        "F16",
+        "F17"
+      ],
+      "new_info": "监管怎么看，以及还不知道的事",
+      "subject": "引语卡和待公布清单",
+      "relation": "证据链",
+      "change": "引语卡出现，三张待公布卡依次弹出",
+      "result": "清单留在画面上，每张卡都标“未公布”"
+    },
+    {
+      "id": "S13",
+      "section": "收束",
+      "lines": [
+        "L023",
+        "L024"
+      ],
+      "pre": 0.3,
+      "post": 1.4,
+      "route": "R1",
+      "asset": "car3d",
+      "source": "scenes/S13/clip.mp4",
+      "visual": "anatomy 跑车合拢成整车，缓慢环绕；说“倒挂靠吸”时风扇和裙边亮一下，“翻身靠喷”时喷口亮一下；最后停在英雄视角",
+      "camera": "从侧后方出发 → 绕到前侧方 → 停在略俯视的英雄视角",
+      "onscreen": [
+        "倒挂靠吸",
+        "翻身靠喷",
+        "能飞几秒"
+      ],
+      "evidence": [
+        "F09",
+        "F12",
+        "F25"
+      ],
+      "new_info": "回答开头的问题：倒挂靠吸，翻身靠喷，能飞几秒",
+      "subject": "完整的车",
+      "relation": "结构",
+      "change": "零件合拢，风扇和喷口依次亮起",
+      "result": "整车停在英雄视角，三句结论依次留在角落",
+      "accents": [
+        "L023:倒挂靠吸"
+      ]
+    }
+  ]
+}
