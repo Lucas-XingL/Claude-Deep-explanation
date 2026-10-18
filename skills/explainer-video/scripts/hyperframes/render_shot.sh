@@ -83,8 +83,11 @@ if [ "$stills" = 1 ]; then
   "${hf[@]}" snapshot "$build" --at "$ts" --no-end --describe false -o "$stillsout" | tail -1
   echo "stills in $stillsout"; exit 0
 fi
-"${hf[@]}" render "$build" -o "$out" --fps "$fps" --quality "$quality" --workers "$workers" --format "$format" --strict \
+# Render inside the build folder (hyperframes writes work-<uuid>/ and .<name>.hf-transaction-*/
+# next to its output while it runs), then move the finished clip into place.
+"${hf[@]}" render "$build" -o "$build/clip.$format" --fps "$fps" --quality "$quality" --workers "$workers" --format "$format" --strict \
   > "$build/render.log" 2>&1 || { tail -40 "$build/render.log"; echo "hyperframes render failed for $id" >&2; exit 1; }
+mv -f "$build/clip.$format" "$out"
 got=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$out")
 node -e "const g=$got,d=$dur;if(Math.abs(g-d)>0.1){console.error('clip is '+g+' s, shot is '+d+' s');process.exit(1)}"
 ffmpeg -v error -y -ss "$(node -e "console.log($dur/2)")" -i "$out" -frames:v 1 "$out.check.png"
