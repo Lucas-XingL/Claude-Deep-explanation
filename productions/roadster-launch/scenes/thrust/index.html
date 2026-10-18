@@ -1,9 +1,11 @@
 <!doctype html>
 <!--
   Fig 6 · thrust, side elevation on paper. One scene for two shots, picked by SHOT.id:
-    S09  L014 the rear valve opens: the jet and the thrust arrow on the car appear together; the car
-         is pushed the other way. L015 the rear down nozzle's axis misses the CG (arm, 示意); it fires
-         and the car turns half a turn about the CG; a front down nozzle stops the turn; it lands.
+    S09  The car keeps falling (slow motion, from S07), gravity drawn from the CG. L014 the rear valve
+         opens: the jet and the thrust arrow on the car appear together; the car is pushed the other
+         way. L015 the rear down nozzle fires from "喷口" to "转": its axis misses the CG (arm, 示意) and
+         the car turns about the CG; line of action and arm leave with the thrust; a front down nozzle
+         stops the turn at half a turn; it lands as the slow motion runs out.
     S10  starts on S09's last frame. L016 bars: thrust > 80 kN (宣称) and weight ≈ 17 kN (估算).
          L017 the down nozzles lift the car (thrust > weight) and it jumps five vehicles; the
          camera follows. Numbers from ../_shared/model.js, motion from ./motion.js.
@@ -13,6 +15,7 @@
 <head>
 <meta charset="utf-8">
 <link rel="stylesheet" href="../_shared/paper.css">
+<style>.mo .mo-corner{font-size:22px}</style>
 </head>
 <body>
 <div class="mo">
@@ -22,7 +25,7 @@
   <div class="mo-plate">
     <span class="mo-corner" data-c="fig">Fig 6</span>
     <span class="mo-corner" data-c="title">推进器 · 反作用力</span>
-    <span class="mo-corner" data-c="hint" id="hint">侧视 · 示意，未按比例</span>
+    <span class="mo-corner" data-c="hint" id="hint"></span>
     <span class="mo-corner" data-c="readout" id="readout"></span>
   </div>
 </div>
@@ -79,6 +82,7 @@ function text(s, x, y, size, { color = INK, weight = 600, align = "left", font =
   g.lineWidth = 6; g.strokeStyle = "rgba(241,236,226,.85)"; g.lineJoin = "round"; g.strokeText(s, x, y);
   g.fillStyle = color; g.fillText(s, x, y); g.restore();
 }
+const measure = (s, size, font = FONT, weight = 600) => { g.save(); g.font = `${weight} ${size}px ${font}`; const w = g.measureText(s).width; g.restore(); return w; };
 function badge(label, x, y, color, alpha = 1) {             // evidence badge (style.json badges)
   if (alpha <= 0) return 0;
   g.save(); g.globalAlpha = alpha; g.font = `600 24px ${FONT}`;
@@ -181,7 +185,17 @@ function s09Geometry(P, al) {
   turnArrow(C[0], C[1], al.turn, al.turnA);
   return n;
 }
-const END09 = { axis: 0.75, axisGrow: 1, axisLbl: 0, arm: 1, armGrow: 1, armLbl: 1, cg: 1, cgLbl: 1, turn: 1, turnA: 1 };
+const END09 = { axis: 0, axisGrow: 1, axisLbl: 0, arm: 0, armGrow: 1, armLbl: 0, cg: 1, cgLbl: 1, turn: 1, turnA: 1 };
+// Gravity from the CG, always (it is falling, or standing); 0.55 m long on screen (示意) so it stays
+// clear of the subtitle band when the car stands. The S10 thrust arrows are drawn to the same scale.
+const GRAV_M = 0.55;
+function gravity(P, alpha = 1, lblAlpha = alpha) {
+  const C = toScreen(P, SP.cg), L = GRAV_M * P.V.S;
+  arrow(g, C[0], C[1] + 18, C[0], C[1] + 18 + L, INK, 8, alpha, 24);
+  text("重力", C[0] + 20, C[1] + 18 + L * 0.3, 28, { alpha: lblAlpha });
+}
+// Same badges as S07 (Fig 4), top left under the Fig number.
+function figBadges() { const bw = badge("示意 · 未按比例", 134, 134, SOFT, 1); badge("慢放", 134 + bw + 12, 134, SOFT, 1); }
 
 // ---------------------------------------------------------------- S09
 function drawS09(t) {
@@ -190,13 +204,13 @@ function drawS09(t) {
   const after = jetsAndThrust(t, P, A.jets, (j) => (j.name === "rear" ? 280 : j.name === "downR" ? 200 : 280));
   drawCar(g, carImg, P);
   // L014: valve, gas, thrust
-  const kValve = atWord(t, "L014", "阀门") * (1 - seg(t, A.tOff + 0.05, A.tOff + 0.35));
+  const kValve = atWord(t, "L014", "阀门") * (1 - seg(t, A.tOff - 0.15, A.tOff + 0.15));
   const open = eo(seg(t, A.tOpen - 0.05, A.tOpen + 0.15)) * (1 - seg(t, A.tOff, A.tOff + 0.2));
   const V = toScreen(P, SP.rearValve), E = toScreen(P, SP.rearExit);
   leader(V[0], V[1] - 76, V[0], V[1] - 26, kValve); text("阀门", V[0], V[1] - 100, 30, { align: "center", alpha: kValve });
-  const kGas = atWord(t, "L014", "气体") * (1 - seg(t, A.tOff, A.tOff + 0.5));
+  const kGas = atWord(t, "L014", "气体") * (1 - seg(t, A.tOff - 0.15, A.tOff + 0.15));
   text("高速气体", E[0] + 150, E[1] - 92, 30, { color: BLUE, alpha: kGas });
-  const kPush = atWord(t, "L014", "反方向") * (1 - seg(t, A.tOff, A.tOff + 0.3));
+  const kPush = atWord(t, "L014", "反方向") * (1 - seg(t, A.tOff - 0.15, A.tOff + 0.15));
   text("推力", E[0] - 200, E[1] + 152, 34, { color: ACCENT, weight: 700, alpha: kPush });
   leader(E[0] - 170, E[1] + 126, E[0] - 170, E[1] + 14, kPush);
   // L015: nozzle, line of action, CG, arm, turn
@@ -205,23 +219,26 @@ function drawS09(t) {
   ring(NB[0], NB[1], 30, kNoz * (1 - seg(t, A.tSpinOff, A.tSpinOff + 0.5)));
   const wCG = T.wordAt("L015", "重心");
   const rest = 1 - seg(t, A.tSpinOff + 0.2, A.tSpinOff + 0.5) + seg(t, A.tStop, A.tStop + 0.4);   // labels rest while it spins freely
+  const kGone = 1 - seg(t, A.tSpinOff, A.tSpinOff + 0.06);        // line of action and arm leave with the thrust arrow
   const al = {
-    axis: kNoz * (1 - 0.25 * seg(t, A.tLand, A.tLand + 0.5)), axisGrow: eio(seg(t, T.wordAt("L015", "不对") - 0.1, T.wordAt("L015", "不对") + 0.6)),
+    axis: kNoz * kGone, axisGrow: eio(seg(t, T.wordAt("L015", "不对") - 0.1, T.wordAt("L015", "不对") + 0.6)),
     axisLbl: atWord(t, "L015", "不对") * (1 - seg(t, wCG + 0.5, wCG + 0.9)),
     cg: atWord(t, "L015", "重心", 0.35), cgLbl: atWord(t, "L015", "重心") * rest,
-    arm: seg(t, wCG + 0.3, wCG + 0.5), armGrow: eio(seg(t, wCG + 0.3, wCG + 0.8)), armLbl: eo(seg(t, wCG + 0.6, wCG + 1.0)) * rest,
+    arm: seg(t, wCG + 0.3, wCG + 0.5) * kGone, armGrow: eio(seg(t, wCG + 0.3, wCG + 0.8)), armLbl: eo(seg(t, wCG + 0.6, wCG + 1.0)) * kGone,
     turn: eio(seg(t, T.wordAt("L015", "转") - 0.1, T.wordAt("L015", "转") + 0.7)), turnA: 1,
   };
   const nAway = s09Geometry(P, al);
+  const wNoz = T.wordAt("L015", "喷口");
+  gravity(P, 1, 1 - seg(t, wNoz - 0.45, wNoz - 0.15) + seg(t, A.tStop, A.tStop + 0.4));   // label rests while L015 is labelled
   after(t);
   valve(P, open, kValve);
   const kNozL = kNoz * (1 - seg(t, wCG + 0.5, wCG + 0.9));
-  text("车尾下喷口", NB[0] + nAway[0] * 52, NB[1] + nAway[1] * 52, 30, { alpha: kNozL, align: nAway[0] < 0 ? "right" : "left" });
+  const uJ = dirToScreen(P, [0, 1]);                                // off the body: beyond the tail, on the jet side
+  text("车尾下喷口", NB[0] + nAway[0] * 120 + uJ[0] * 48, NB[1] + nAway[1] * 120 + uJ[1] * 48, 30, { alpha: kNozL, align: nAway[0] < 0 ? "right" : "left" });
   // the stop: a short burst from the front down nozzle
   const F = toScreen(P, SP.downF), kStop = onOff(t, A.tStop - A.d2, A.tStop, 0.15);
   text("反向喷，停转", F[0] + 40, F[1] + 64, 28, { color: ACCENT, alpha: kStop });
-  const deg = Math.round((A.theta(t) * 180) / Math.PI);
-  document.getElementById("readout").textContent = t < A.tSpin - 0.3 ? (open > 0.5 ? "阀门 开 · 喷气" : "阀门 关") : `转角 ${deg}°`;
+  figBadges();
 }
 
 // ---------------------------------------------------------------- S10
@@ -264,7 +281,10 @@ function bars(t) {
     const x0 = BX + Wk * KN, x1 = BX + Tc * KN;
     g.save(); g.globalAlpha = kR; g.strokeStyle = ACCENT; g.lineWidth = 3;
     g.beginPath(); g.moveTo(x0, BY1 - 38); g.lineTo(x0, BY1 - 48); g.lineTo(x0 + (x1 - x0) * kR, BY1 - 48); g.lineTo(x0 + (x1 - x0) * kR, BY1 - 38); g.stroke(); g.restore();
-    text(`≈ ${M.thrustToWeight().toFixed(1)} 倍车重`, (x0 + x1) / 2, BY1 - 76, 30, { color: ACCENT, weight: 700, align: "center", alpha: kR });
+    text(`≈ ${M.thrustToWeight().toFixed(1)} 倍车重`, x1 + 18, BY1 - 46, 30, { color: ACCENT, weight: 700, alpha: kR });
+    // F13: a total thrust, direction not published; using it as lift assumes it all points down
+    text("假设全部朝下喷", x1 + 18, BY1 - 86, 24, { color: SOFT, weight: 500, alpha: kR });
+    badge("示意", x1 + 30 + measure("假设全部朝下喷", 24, FONT, 500), BY1 - 86, SOFT, kR);
   }
 }
 function vehicle(v, V, alpha) {
@@ -294,21 +314,18 @@ function drawS10(t) {
   ground(P.V);
   for (const v of B.vehicles) vehicle(v, P.V, 1);
   trail(B.tFire, t, null, 0.55);
-  const after = jetsAndThrust(t, P, B.jets, () => 0.5 * B.r * 92 * sc);
+  const after = jetsAndThrust(t, P, B.jets, () => 0.5 * B.r * GRAV_M * P.V.S);   // each nozzle: half of r × weight
   drawCar(g, carImg, P);
   // S09's last frame, then its marks clear away (the CG stays)
   const fade = 1 - seg(t, 0.25, 0.9);
-  s09Geometry(P, { ...END09, axis: END09.axis * fade, arm: fade, armLbl: fade, cgLbl: END09.cgLbl * (1 - seg(t, 0.25, 0.9)), turnA: fade });
-  // weight on the car, from "车重"
-  const C = toScreen(P, SP.cg), kG = atWord(t, "L016", "车重");
-  arrow(g, C[0], C[1] + 18, C[0], C[1] + 18 + 92 * sc, INK, 8, kG, 28);
-  text("重力", C[0] + 22, C[1] + 92 * sc, 28, { alpha: kG });
+  s09Geometry(P, { ...END09, cgLbl: END09.cgLbl * fade, turnA: fade });
+  gravity(P);                                                      // carried over from S09
+  const C = toScreen(P, SP.cg);
   const kUp = onOff(t, B.jets[0].on, B.jets[0].off);
   text("推力", toScreen(P, SP.downR)[0] + 24, C[1] - 70, 28, { color: ACCENT, weight: 700, alpha: kUp });
   after(t);
   bars(t);
-  const deg = 180, ro = document.getElementById("readout");
-  ro.textContent = t < 0.9 ? `转角 ${deg}°` : P.landed ? "落地" : P.y > SP.cgH + 0.01 ? "离地" : t > B.tGo ? "加速" : "";
+  figBadges();
 }
 
 const carImg = new Image();

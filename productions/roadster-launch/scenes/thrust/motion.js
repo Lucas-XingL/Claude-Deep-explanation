@@ -41,7 +41,23 @@
     const alpha = Math.PI / (d * (d / 2 + coast + d2 / 2));         // rad/s² during the burst (示意 time)
     const w1 = alpha * d, alpha2 = w1 / d2;                         // counter-burst brings the spin to 0
     const tLand = T.wordAt("L015", "翻身") + 0.95;
-    const y0 = 3.7, DX = 2.3;                                       // CG height at t=0; drift before landing
+    const y0 = 4.15, DX = 2.3;                                      // CG height at t=0; drift before landing
+    // Falling all the time (it left the ramp in S07): real gravity in slowed time. The slow-motion
+    // rate stays r0 while the narration explains, then rises so the car lands at tLand (慢放, 示意).
+    const g0 = 9.80665, v0 = 1.5, r0 = 0.045, tr0 = tStop - 0.3, tr1 = tStop + 0.3, DT = 1 / 240;
+    const sstep = (k) => k * k * (3 - 2 * k), cl = (x) => Math.min(1, Math.max(0, x));
+    const fall = (r1, keep) => {                                     // CG heights every DT until landing
+      let h = y0, v = v0; const hs = [h];
+      for (let i = 1; i * DT < 20; i++) {
+        const r = r0 + (r1 - r0) * sstep(cl(((i - 0.5) * DT - tr0) / (tr1 - tr0)));
+        v += g0 * r * DT; h -= v * r * DT; hs.push(Math.max(h, SP.cgH));
+        if (h <= SP.cgH) return { hs, tl: (i - 1 + (hs[i - 1] - SP.cgH) / (hs[i - 1] - h)) * DT };
+      }
+      return { hs, tl: Infinity };
+    };
+    let lo = r0, hi = 4, F = fall(hi);
+    for (let k = 0; k < 40; k++) { const mid = (lo + hi) / 2, f = fall(mid); if (f.tl > tLand) lo = mid; else { hi = mid; F = f; } }
+    const heightAt = (t) => { const i = t / DT, i0 = Math.floor(i); if (i0 + 1 >= F.hs.length) return SP.cgH; return F.hs[i0] + (F.hs[i0 + 1] - F.hs[i0]) * (i - i0); };
     const Tb = tOff - tOpen, a = DX / (0.5 * Tb * Tb + Tb * (tLand - tOff)), vLand = a * Tb;
     const slideT = 0.35, slide = vLand * slideT / 2;
     const X0 = X_LAND + DX + slide;
@@ -59,7 +75,7 @@
       else if (t < tOff) dx = 0.5 * a * (t - tOpen) ** 2;
       else if (t < tLand) dx = 0.5 * a * Tb * Tb + a * Tb * (t - tOff);
       else { const u = Math.min(t - tLand, slideT); dx = DX + vLand * u - vLand * u * u / (2 * slideT); }
-      const y = t < tLand ? y0 - (y0 - SP.cgH) * (t / tLand) ** 5 : SP.cgH;
+      const y = t < tLand ? heightAt(Math.max(0, t)) : SP.cgH;
       return { x: X0 - dx, y, phi: -Math.PI + theta(t), wheel: 0, landed: t >= tLand };
     };
     const jets = [

@@ -4,13 +4,15 @@
   of gas (250 dots, the engineer's 250 kg, 宣称). Middle: the account, "每牛每秒 ≈ 1.5 克" (估算,
   specific impulse 70 s). Right: the car hovering on its down nozzles (thrust = weight) and a hover
   timer. The tank, the thrust and the timer all come from MODEL.hoverAt(τ) in ../_shared/model.js,
-  run in machine time τ at 3× (written in the corner). When the tank is empty the jets stop and the
-  car drops: about 10 s (估算). L020 adds the engineer's own "about 5 s" (宣称) on the time axis.
+  run in machine time τ at 3× (a badge in the top-right corner). When the tank is empty the jets stop
+  and the car drops: about 10 s (估算). L020: the engineer's own "about 5 s" (宣称) grows as an ink bar
+  under the time axis, with F18's scope ("one acceleration, not a hover").
 -->
 <html lang="zh">
 <head>
 <meta charset="utf-8">
 <link rel="stylesheet" href="../_shared/paper.css">
+<style>.mo .mo-corner{font-size:22px}</style>
 </head>
 <body>
 <div class="mo">
@@ -20,7 +22,7 @@
   <div class="mo-plate">
     <span class="mo-corner" data-c="fig">Fig 7</span>
     <span class="mo-corner" data-c="title">能飞多久 · 气量账</span>
-    <span class="mo-corner" data-c="hint" id="hint">理想情况 · 估算</span>
+    <span class="mo-corner" data-c="hint" id="hint"></span>
     <span class="mo-corner" data-c="readout" id="readout"></span>
   </div>
 </div>
@@ -121,7 +123,7 @@ function tank(t, gas, k) {
 
 // ---- right: the car on its down nozzles, and the timer ----
 const GY = 640, CAR_W = 480, K = CAR_W / SP.w, PXM = CAR_W / SP.len, CAR_X = 1490;
-const AX = { x0: 1180, y: 772, pxs: 50, max: 12 };              // time axis, px per second
+const AX = { x0: 1180, y: 740, pxs: 50, max: 12 };              // time axis, px per second
 function carHeight(tau, t) {                                     // CG height above the wheels-on-ground state (m)
   if (t <= T0) return 0;
   if (tau <= HOVER_T) return HOVER_H * eio(clamp(tau / 1.2));
@@ -149,7 +151,7 @@ function draw(t) {
   const MX = 640;
   const kIsp = atWord(t, "L018", "算下来");
   const bw = badge("估算", MX, 248, BLUE, kIsp);
-  text(`按比冲 ${M.isp} s`, MX + bw + 12, 248, 26, { color: BLUE, weight: 500, alpha: kIsp });
+  text("按常见冷气喷口算", MX + bw + 12, 248, 26, { color: BLUE, weight: 500, alpha: kIsp });   // 比冲 stays in the assumptions
   const parts = [["每牛", "牛顿", INK], ["每秒", "秒", INK], [` ≈ ${M.gramsPerNs().toFixed(1)} 克`, "一点五克", ACCENT]];
   let px = MX;
   for (const [s, w, c] of parts) { text(s, px, 320, 60, { color: c, weight: 700, alpha: atWord(t, "L018", w) }); px += measure(s, 60, FONT, 700); }
@@ -194,8 +196,8 @@ function draw(t) {
   g.beginPath(); g.moveTo(AX.x0, AX.y); g.lineTo(AX.x0 + AX.max * AX.pxs, AX.y); g.stroke();
   for (let s = 0; s <= AX.max; s++) { const x = AX.x0 + s * AX.pxs; g.beginPath(); g.moveTo(x, AX.y - (s % 5 ? 6 : 12)); g.lineTo(x, AX.y + (s % 5 ? 6 : 12)); g.stroke(); }
   g.restore();
-  for (const s of [0, 5, 10]) text(`${s}`, AX.x0 + s * AX.pxs, AX.y + 34, 24, { align: "center", font: MONO, weight: 400, color: SOFT, alpha: kAx });
-  text("s", AX.x0 + AX.max * AX.pxs + 18, AX.y + 34, 24, { font: MONO, weight: 400, color: SOFT, alpha: kAx });
+  for (const s of [0, 5, 10]) text(`${s}`, AX.x0 + s * AX.pxs, AX.y + 30, 24, { align: "center", font: MONO, weight: 400, color: SOFT, alpha: kAx });
+  text("s", AX.x0 + AX.max * AX.pxs + 18, AX.y + 30, 24, { font: MONO, weight: 400, color: SOFT, alpha: kAx });
   if (kAx > 0 && elapsed > 0) {
     g.save(); g.globalAlpha = kAx; g.strokeStyle = ACCENT; g.lineWidth = 10; g.lineCap = "round";
     g.beginPath(); g.moveTo(AX.x0, AX.y); g.lineTo(AX.x0 + elapsed * AX.pxs, AX.y); g.stroke();
@@ -212,22 +214,25 @@ function draw(t) {
   const x5 = AX.x0 + M.burnClaim * AX.pxs;
   const wE = wordAt("L020", "工程师"), w5t = wordAt("L020", "五");
   if (wE != null && w5t != null && t > wE - 0.1) {
-    const grow = eio(seg(t, wE, w5t + 0.2)), y2 = AX.y + 26;
+    const grow = eio(seg(t, wE, w5t + 0.2)), y2 = AX.y + 66;
     g.save(); g.globalAlpha = clamp((t - wE + 0.1) / 0.3); g.strokeStyle = INK; g.lineWidth = 10; g.lineCap = "round";
     g.beginPath(); g.moveTo(AX.x0, y2); g.lineTo(AX.x0 + grow * M.burnClaim * AX.pxs, y2); g.stroke();
     g.fillStyle = INK; g.beginPath(); g.arc(AX.x0 + grow * M.burnClaim * AX.pxs, y2, 11, 0, Math.PI * 2); g.fill(); g.restore();
   }
-  text("每次充气", AX.x0 - 12, AX.y + 26, 24, { align: "right", color: SOFT, weight: 500, alpha: wE == null ? 0 : clamp((t - wE) / 0.4) });
+  text("每次充气", AX.x0 - 16, AX.y + 66, 24, { align: "right", color: SOFT, weight: 500, alpha: wE == null ? 0 : clamp((t - wE) / 0.4) });
   if (k5 > 0) {
     g.save(); g.globalAlpha = k5; g.strokeStyle = INK; g.lineWidth = 3; g.setLineDash([7, 6]);
-    g.beginPath(); g.moveTo(x5, AX.y - 18); g.lineTo(x5, AX.y + 14); g.stroke(); g.restore();
+    g.beginPath(); g.moveTo(x5, AX.y - 18); g.lineTo(x5, AX.y + 12); g.stroke(); g.restore();
     g.save(); g.globalAlpha = k5; g.fillStyle = INK; g.beginPath(); g.moveTo(x5, AX.y - 14); g.lineTo(x5 - 11, AX.y - 32); g.lineTo(x5 + 11, AX.y - 32); g.closePath(); g.fill(); g.restore();
   }
   const l5 = `工程师说 ≈ ${M.burnClaim} 秒`, w5 = measure(l5, 30, FONT, 700);
-  text(l5, x5 - 20, AX.y + 82, 30, { weight: 700, alpha: k5 });
-  badge("宣称", x5 - 20 + w5 + 12, AX.y + 82, ACCENT, k5);
+  text(l5, x5 + 26, AX.y + 66, 30, { weight: 700, alpha: k5 });                 // at the end of the ink bar
+  badge("宣称", x5 + 38 + w5, AX.y + 66, ACCENT, k5);
+  text("指一次加速，不是悬停", x5 + 26, AX.y + 104, 24, { color: SOFT, weight: 500, alpha: k5 });   // F18's scope
 
-  document.getElementById("readout").textContent = running ? `快放 ×${RATE}` : t > TE ? "气瓶已空" : "";
+  // machine-time badge, top-right corner under the title, while the hover runs
+  const kFast = clamp((t - T0) / 0.2) * (1 - seg(t, TE, TE + 0.3)), fw = measure(`快放 ×${RATE}`, 24) + 22;
+  badge(`快放 ×${RATE}`, 1786 - fw, 134, SOFT, kFast);
 }
 
 const carImg = new Image();
