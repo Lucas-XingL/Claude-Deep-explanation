@@ -10,7 +10,10 @@ research/assets.md and brief.md / choices.md:
   - storyboard shots have unique ids, their lines exist and are used once, evidence ids exist,
     shots without lines have a duration, routes and risks are known values;
   - the full storyboard uses every script line; the directing fields are filled in
-    (meta question/throughline/answer; per shot new_info/subject/relation/change/result).
+    (meta question/throughline/answer; per shot new_info/subject/relation/change/result);
+    every shot's asset is one of the storyboard's master assets;
+  - a line citing a C or D fact says who claims it (说、称、据……); a line citing an E fact
+    sounds like an estimate (算、约、如果……); numeric facts say what the number covers (口径).
 
 FAIL means the pipeline will break or a claim has no source; WARN means something to look at.
 A clean run only says the files agree with each other. It does not say the content is right.
@@ -30,6 +33,9 @@ META_FIELDS = ("question", "throughline", "answer")
 SHOT_FIELDS = ("new_info", "subject", "relation", "change", "result")
 MAX_CLAUSE = 16   # timeline.py --max-chars for 16:9
 MAX_ONSCREEN = 15
+# Words that attribute a claim, and words that mark an estimate (checked on lines citing C/D or E facts).
+ATTRIB_RE = re.compile(r"说|称|据|表示|透露|介绍|计时|公布|声明|宣布|传闻|消息|爆料|号称|官方|工程师|报道|显示")
+ESTIMATE_RE = re.compile(r"算|估|如果|假设|按|大约|约|左右|大概|差不多|理想|示意|至少|最多|上下|几乎|比如|例如|假如|设")
 
 problems = []
 
@@ -54,23 +60,42 @@ def read_script(path):
 
 
 def read_facts(path):
-    """Return {fact_id: (level_cell, source_cell)} from the markdown table."""
-    out = {}
+    """Return {fact_id: level_cell} from the markdown table; columns are found by their headers."""
+    out, col = {}, {"事实": 1, "等级": 2, "来源": 3}
+    numeric_without_scope = []
     for n, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         cells = [c.strip() for c in raw.strip().strip("|").split("|")]
+        if cells and cells[0] == "编号":
+            col = {name: i for i, name in enumerate(cells)}
+            continue
         if not cells or not re.fullmatch(r"F\d+", cells[0]):
             continue
+        get = lambda name: cells[col[name]] if name in col and col[name] < len(cells) else ""
         fid = cells[0]
         if fid in out:
             report("FAIL", f"facts.md:{n}", f"{fid} 重复")
-        level = cells[2] if len(cells) > 2 else ""
-        source = cells[3] if len(cells) > 3 else ""
+        level, source = get("等级"), get("来源")
         if not LEVEL_RE.search(level):
             report("FAIL", f"facts.md:{n}", f"{fid} 没有证据等级（A–E、R、S、G、I）")
         if not source or source in {"—", "-", "…"}:
             report("FAIL", f"facts.md:{n}", f"{fid} 没有来源")
-        out[fid] = (level, source)
+        letters = sorted(set(LEVEL_RE.findall(level)))
+        if len(letters) > 1:
+            report("WARN", f"facts.md:{n}", f"{fid} 混合了 {'、'.join(letters)} 几个等级，建议拆成几条，每条一个等级")
+        if re.search(r"\d", get("事实")) and not get("口径"):
+            numeric_without_scope.append(fid)
+        out[fid] = level
+    if numeric_without_scope:
+        where = "缺“口径”列" if "口径" not in col else "“口径”为空"
+        report("WARN", "facts.md", f"{len(numeric_without_scope)} 条带数字的事实{where}，写清这个数指的是什么"
+               f"（哪个量、方向、条件、谁测的）：{', '.join(numeric_without_scope)}（见 research.md 第 2 节）")
     return out
+
+
+def level_of(level):
+    """The fact's single level letter, or "" when the cell mixes several (those are skipped)."""
+    letters = set(LEVEL_RE.findall(level))
+    return letters.pop() if len(letters) == 1 else ""
 
 
 def check_board(proj, path, script_texts, facts, full):
@@ -88,6 +113,7 @@ def check_board(proj, path, script_texts, facts, full):
     if missing_meta:
         report("WARN", name, f"meta 缺主线字段 {', '.join(missing_meta)}（见 directing.md 第 1 节）")
 
+    masters = set(board.get("assets", {}))
     seen_ids, used = set(), {}
     lacking = {k: [] for k in SHOT_FIELDS}
     routes = set()
@@ -111,6 +137,16 @@ def check_board(proj, path, script_texts, facts, full):
         routes.add(route)
         if route not in ROUTES:
             report("WARN", where, f"route 是 {route!r}，应为 R1–R9")
+        asset = shot.get("asset")
+        if asset and asset not in masters:
+            report("WARN", where, f"asset {asset!r} 不在 assets 里；同一个主体要来自同一个母版资产（见 directing.md 第 5 节）")
+        if route == "R1" and not asset:
+            report("WARN", where, "R1 镜头没有写 asset（用哪个剖解模型）")
+        if "hold" in shot and not str(shot["hold"]).strip():
+            report("WARN", where, "hold 要写原因，比如“让观众读完这张图”")
+        for fr in shot.get("frames", []):
+            if fr.get("image") and not (proj / fr["image"]).exists():
+                report("WARN", where, f"方案页的画面还不存在：{fr['image']}")
         src = shot.get("source")
         if not src:
             report("FAIL", where, "没有 source")
@@ -173,6 +209,11 @@ def main():
             cited.add(fid)
             if facts and fid not in facts:
                 report("FAIL", f"{a.script} {lid}", f"{{{fid}}} 不在 facts.md 里")
+        levels = {level_of(facts.get(fid, "")) for fid in script_facts[lid]}
+        if levels & {"C", "D"} and not ATTRIB_RE.search(text):
+            report("WARN", f"{a.script} {lid}", "引用了 C/D 级事实，但句子里没有“说、称、据”之类的归属词，听起来像已证实的事实")
+        if "E" in levels and not ATTRIB_RE.search(text) and not ESTIMATE_RE.search(text):
+            report("WARN", f"{a.script} {lid}", "引用了 E 级估算，但句子听起来像事实；用“算下来、大约、如果按……”")
         for clause in re.split(r"[，。！？；：、,.!?;:]", text):
             if len(clause.strip()) > MAX_CLAUSE:
                 report("WARN", f"{a.script} {lid}", f"一个分句超过 {MAX_CLAUSE} 字，字幕会从中间断开：{clause.strip()}")

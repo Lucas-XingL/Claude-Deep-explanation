@@ -1,0 +1,162 @@
+<title>方案页</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
+<!--
+  The plan page the user confirms before the full film is made. scripts/make_plan.py fills
+  window.PLAN below from the project's files; do not edit the generated plan/index.html by hand.
+-->
+<style>
+/* One reading column of production notes; storyboard frames sit in a wider grid. */
+:root {
+  --bg: #eef0ee; --surface: #fbfbfa; --ink: #1f2326; --soft: #5b6268; --rule: #d3d8d6;
+  --claim: #c4472b; --est: #22769b; --fact: #2c7a4b; --mark: #f3e7b0;
+  --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Source Han Sans SC", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #14171a; --surface: #1c2024; --ink: #e6e8e7; --soft: #a3aaaf; --rule: #30363b;
+    --claim: #ee7a5c; --est: #5db4d8; --fact: #63c48c; --mark: #4a4120; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #14171a; --surface: #1c2024; --ink: #e6e8e7; --soft: #a3aaaf; --rule: #30363b;
+  --claim: #ee7a5c; --est: #5db4d8; --fact: #63c48c; --mark: #4a4120; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.7;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px 64px; }
+.wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 52px; }
+h1, h2, h3 { margin: 0; line-height: 1.3; text-wrap: balance; }
+h1 { font-size: clamp(28px, 5vw, 42px); font-weight: 900; }
+h2 { font-size: 24px; font-weight: 900; }
+h3 { font-size: 17px; font-weight: 700; }
+p { margin: 0; }
+section { display: grid; gap: 16px; }
+.eyebrow, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font-size: 13px; letter-spacing: .06em; color: var(--soft); }
+.muted { color: var(--soft); }
+.read { max-width: 720px; }
+.md { display: grid; gap: 8px; max-width: 760px; }
+.md ul, .md ol { margin: 0; padding-left: 1.4em; display: grid; gap: 2px; }
+.md h1, .md h2 { font-size: 19px; } .md h3 { font-size: 16px; }
+.md code, code { font-family: var(--font-mono); font-size: .9em; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
+.stat { background: var(--surface); padding: 10px 14px; }
+.stat b { display: block; font-size: 22px; font-family: var(--font-mono); }
+.stat span { font-size: 13px; color: var(--soft); }
+.qa { display: grid; grid-template-columns: 5em 1fr; gap: 6px 16px; max-width: 820px; }
+.qa dt { color: var(--soft); font-size: 14px; padding-top: 2px; } .qa dd { margin: 0; min-width: 0; }
+.dec { background: var(--surface); padding: 14px 18px; display: grid; gap: 6px; }
+.dec ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.dec li { padding-left: 18px; position: relative; }
+.dec li::before { content: "○"; position: absolute; left: 0; color: var(--soft); }
+.dec li.rec::before { content: "●"; color: var(--ink); }
+.dec li.rec::after { content: " 推荐"; font-family: var(--font-mono); font-size: 12px; color: var(--fact); }
+.lv { display: inline-block; font-family: var(--font-mono); font-size: 12px; font-weight: 600; padding: 0 6px; border: 1.5px solid currentColor; line-height: 1.6; white-space: nowrap; }
+.lv.A, .lv.B { color: var(--fact); } .lv.C, .lv.D { color: var(--claim); } .lv.E, .lv.I, .lv.R, .lv.S, .lv.G { color: var(--est); }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; background: var(--surface); }
+th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--rule); }
+th { font-size: 13px; font-weight: 500; color: var(--soft); white-space: nowrap; }
+pre { margin: 0; background: var(--surface); padding: 12px 14px; overflow-x: auto; font-family: var(--font-mono); font-size: 13px; }
+.script { display: grid; gap: 14px; }
+.script h3 { font-size: 14px; color: var(--soft); font-weight: 500; }
+.ln { display: grid; grid-template-columns: 4.2em 1fr auto; gap: 4px 12px; padding: 5px 10px; align-items: baseline; }
+.ln .id { font-family: var(--font-mono); font-size: 13px; color: var(--soft); }
+.ln .fx { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.tl { position: relative; height: 34px; background: var(--surface); }
+.tl div { position: absolute; top: 0; height: 34px; border-right: 2px solid var(--bg); padding: 6px 6px; font-family: var(--font-mono); font-size: 12px; font-weight: 600; overflow: hidden; white-space: nowrap; }
+.tl .r1 { background: color-mix(in srgb, var(--fact) 24%, var(--surface)); }
+.tl .r2 { background: color-mix(in srgb, var(--est) 24%, var(--surface)); }
+.tl .r3 { background: color-mix(in srgb, var(--claim) 18%, var(--surface)); }
+.shot { display: grid; gap: 12px; padding-top: 16px; border-top: 2px solid var(--ink); }
+.shot header { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
+.shot .sid { font-family: var(--font-mono); font-weight: 600; font-size: 19px; }
+.frames { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.frames figure { margin: 0; display: grid; gap: 4px; min-width: 0; cursor: zoom-in; }
+.frames figure.big { grid-column: 1 / -1; cursor: zoom-out; }
+.frames img { width: 100%; max-width: 100%; height: auto; display: block; border: 1px solid var(--rule); background: var(--surface); }
+.frames figcaption { font-size: 13px; color: var(--soft); }
+.noframe { background: var(--surface); border: 1px dashed var(--rule); padding: 12px 14px; font-size: 14px; color: var(--soft); }
+.recipe { display: grid; grid-template-columns: 8.5em 1fr; background: var(--surface); }
+.recipe dt, .recipe dd { margin: 0; padding: 6px 12px; border-bottom: 1px solid var(--rule); }
+.recipe dt { color: var(--soft); font-size: 14px; } .recipe dd { min-width: 0; }
+.say { display: grid; gap: 3px; font-size: 15px; }
+.say div { display: grid; grid-template-columns: 4.2em 1fr; gap: 10px; }
+.say .id { font-family: var(--font-mono); color: var(--soft); font-size: 13px; padding-top: 2px; }
+.voice { display: grid; gap: 8px; }
+.voice div { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: var(--surface); padding: 8px 12px; }
+.voice audio { max-width: 100%; }
+.lint div { font-family: var(--font-mono); font-size: 13px; }
+.lint .FAIL { color: var(--claim); font-weight: 600; }
+@media (max-width: 560px) {
+  .qa, .recipe { grid-template-columns: 1fr; } .recipe dt { border-bottom: none; padding-bottom: 0; }
+  .ln { grid-template-columns: 3.6em 1fr; } .ln .fx { grid-column: 2; justify-content: flex-start; }
+}
+</style>
+
+<div class="wrap" id="app"></div>
+
+<script>
+window.PLAN = /*__PLAN__*/null;
+</script>
+<script>
+(() => {
+const P = window.PLAN, app = document.getElementById("app");
+if (!P) { app.textContent = "没有数据：这个文件是模板，请运行 scripts/make_plan.py 生成 plan/index.html。"; return; }
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const lv = (l) => l ? `<span class="lv ${esc(l[0])}">${esc(l)}</span>` : "";
+const sec = (title, body, sub = "") => `<section><h2>${title}</h2>${sub ? `<p class="read muted">${sub}</p>` : ""}${body}</section>`;
+const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+const LINE = {}; P.script.forEach(([, ls]) => ls.forEach((l) => (LINE[l.id] = l)));
+const LABELS = { new_info: "新东西", subject: "看哪个东西", relation: "讲什么关系", change: "什么在变", result: "后果在哪里看得见", risks: "预检风险", hold: "停留的理由", visual: "画面", camera: "机位", onscreen: "屏幕文字" };
+let html = "";
+
+html += `<header style="display:grid;gap:14px">
+  <p class="eyebrow">方案页 · ${esc(P.generated)} · 确认后直接做全片</p>
+  <h1>${esc(P.title)}</h1>
+  ${P.request ? `<p class="read" style="font-size:17px">${esc(P.request)}</p>` : ""}
+  <div class="stats">
+    <div class="stat"><b>${fmt(P.duration)}</b><span>成片时长（${P.timing_measured ? "实测配音" : "按字数估算"}）</span></div>
+    <div class="stat"><b>${P.shots.length}</b><span>个镜头</span></div>
+    <div class="stat"><b>${P.lines}</b><span>句口播 · ${P.chars} 字</span></div>
+    <div class="stat"><b>${esc(P.estimate)}</b><span>确认后的制作时间（粗估）</span></div>
+  </div>
+</header>`;
+
+if (P.decisions.length) html += sec("需要你确认的事", `<div style="display:grid;gap:10px">${P.decisions.map((d) => `
+  <div class="dec"><h3>${esc(d.q)}</h3>${d.options.length ? `<ul>${d.options.map((o) => `<li class="${o.rec ? "rec" : ""}">${esc(o.text)}</li>`).join("")}</ul>` : ""}${d.note ? `<p class="muted">${esc(d.note)}</p>` : ""}</div>`).join("")}</div>`,
+  "每条都写了推荐做法。你不改，就按推荐的做；改了哪条，告诉我编号和选择。");
+
+html += sec("全片的问题和回答", `<dl class="qa">
+  <dt>问题</dt><dd>${esc(P.meta.question)}</dd><dt>主线</dt><dd>${esc(P.meta.throughline)}</dd><dt>回答</dt><dd>${esc(P.meta.answer)}</dd></dl>
+  ${P.brief ? `<details><summary>完整简报 brief.md</summary><div class="md" style="margin-top:10px">${P.brief}</div></details>` : ""}
+  ${P.choices ? `<div class="md"><h3>已定的选择（choices.md）</h3>${P.choices}</div>` : ""}`);
+
+if (P.voice.length) html += sec("配音试听", `<div class="voice">${P.voice.map((v) => `<div><span class="mono muted">${esc(v.id)}</span><audio controls preload="none" src="${esc(v.src)}"></audio><span>${esc(LINE[v.id]?.text || "")}</span></div>`).join("")}</div>`, "只生成了这几句，用来确认音色和语速。");
+
+const total = P.duration || 1;
+html += sec("分镜", `<div class="tl">${P.shots.map((s) => `<div class="${s.route === "R1" ? "r1" : s.route === "R3" ? "r3" : "r2"}" style="left:${(s.start / total) * 100}%;width:${((s.end - s.start) / total) * 100}%" title="${esc(s.id)} ${esc(s.section || "")}">${esc(s.id)}</div>`).join("")}</div>
+  <div style="display:grid;gap:36px">${P.shots.map((s) => `
+  <article class="shot">
+    <header><span class="sid">${esc(s.id)}</span><span class="mono">${fmt(s.start)}–${fmt(s.end)}</span><span class="muted">${esc(s.section || "")} · ${esc(s.route)}${s.asset ? " · " + esc(s.asset) : ""}</span></header>
+    ${s.frames.length ? `<div class="frames">${s.frames.map((f) => `<figure tabindex="0"><img src="${esc(f.src)}" alt="${esc(f.caption || s.id)}" loading="lazy"><figcaption>${esc(f.caption || "")}</figcaption></figure>`).join("")}</div>`
+      : `<div class="noframe">还没有画面。${esc(s.visual || "")}</div>`}
+    <div class="say">${s.lines.map((id) => `<div><span class="id">${esc(id)}</span><span>${esc(LINE[id]?.text || "")}</span></div>`).join("")}</div>
+    <dl class="recipe">${["visual", "camera", "new_info", "subject", "relation", "change", "result", "hold", "onscreen", "risks"].filter((k) => s[k] && String(s[k]).length).map((k) => `<dt>${LABELS[k]}</dt><dd>${esc(Array.isArray(s[k]) ? s[k].join("、") : s[k])}</dd>`).join("")}</dl>
+  </article>`).join("")}</div>`, `时间${P.timing_measured ? "来自实测配音" : "按字数估算，配音后以实测为准"}。点画面可以放大。`);
+
+html += sec("脚本", `<div class="script">${P.script.map(([name, ls]) => `<div><h3>${esc(name)}</h3>${ls.map((l) => `
+  <div class="ln"><span class="id">${esc(l.id)}</span><span>${esc(l.text)}</span><span class="fx">${l.facts.map((f) => `<span title="${esc(f.id)}">${lv(f.level)}</span>`).join("")}</span></div>`).join("")}</div>`).join("")}</div>`,
+  "每句后面是它引用的事实的证据等级：A、B 是官方或可靠报道，C、D 是宣称或传闻，E 是我们的估算。");
+
+html += sec("事实表", `<div class="tbl"><table><thead><tr><th>编号</th><th>事实</th><th>等级</th><th>口径</th><th>来源</th></tr></thead><tbody>${P.facts.map((f) => `
+  <tr><td class="mono">${esc(f.id)}</td><td>${esc(f.text)}</td><td>${lv(f.level)}</td><td>${esc(f.scope)}</td><td>${esc(f.source)}</td></tr>`).join("")}</tbody></table></div>`);
+
+if (P.model) html += sec("数值模型的输出", `<pre>${esc(P.model)}</pre>`, "口播里的数字都要和这里一致。");
+html += sec("结构检查", `<div class="lint">${P.lint.map((l) => `<div class="${l.startsWith("FAIL") ? "FAIL" : ""}">${esc(l)}</div>`).join("") || "<div>没有问题</div>"}</div>`, "lint_project.py 的结果。它只说明文件之间对得上，不说明内容正确。");
+
+app.innerHTML = html;
+app.addEventListener("click", (e) => { const f = e.target.closest(".frames figure"); if (f) f.classList.toggle("big"); });
+app.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.matches(".frames figure")) { e.preventDefault(); e.target.classList.toggle("big"); } });
+})();
+</script>

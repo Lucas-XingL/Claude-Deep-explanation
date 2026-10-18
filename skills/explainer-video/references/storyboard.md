@@ -73,6 +73,9 @@
 | `new_info` | 建议 | 这个镜头给观众带来的新东西。写不出来就删掉或合并这个镜头 |
 | `subject` / `relation` / `change` / `result` | 建议 | 画面配方：看哪个东西、讲什么关系、什么在变、后果在哪里看得见（见 `directing.md` 第 2、3 节） |
 | `risks` | 否 | `key_action`、`continuity`、`occlusion`、`image_visibility`，渲染前按 `directing.md` 第 8 节预检 |
+| `asset` | R1 必填 | 这个镜头用哪个母版资产，必须是 `assets` 里的一个键。同一个主体在不同镜头里要用同一个母版 |
+| `frames` | 否 | 方案页上展示的画面：`[{"image": "plan/stills/S03/t_2.00.png", "caption": "L007：……"}]`（见 SKILL.md 第 6 步） |
+| `hold` | 否 | 有意让画面停住时写原因，比如“让观众读完这张图”。`check_sync.py` 不会把这个镜头的句子报成静止 |
 
 `meta` 里的 `question`、`throughline`、`answer` 是全片的问题、主线和回答（见 `directing.md` 第 1 节）。脚本和分镜都写好后，运行 `python3 scripts/lint_project.py <proj>` 检查句子编号、事实编号、镜头字段是否对得上。
 

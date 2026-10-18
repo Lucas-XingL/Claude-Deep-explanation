@@ -3,3 +3,9 @@ __pycache__/
 *.pyc
 .DS_Store
 out/
+# Plan pages are rebuilt by make_plan.py; plan/decisions.md stays in the repo.
+**/plan/index.html
+**/plan/est/
+**/plan/frames/
+**/plan/voice/
+**/plan/stills/

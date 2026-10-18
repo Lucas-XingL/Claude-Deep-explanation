@@ -2,7 +2,7 @@
 # Build and render one storyboard shot from an anatomy-reveal project into scenes/<id>/clip.mp4.
 #
 #   bash render_shot.sh <anatomy project> <shot.mjs> <timeline.json> <id> <out clip.mp4> \
-#        [--ratio 16:9] [--jobs 3] [--step 8] [--most 6] [--stills-only]
+#        [--ratio 16:9] [--jobs 3] [--step 8] [--most 6] [--stills-only] [--min-parts 40]
 #
 # What it takes care of (each one cost us a render):
 #   - render.mjs takes positional args; in blur mode the unused third one swallows the next
@@ -12,14 +12,18 @@
 #   - the shot is split into --jobs time ranges rendered in parallel, then encoded once.
 #   - afterwards the clip's length is compared with the shot's and a middle frame is saved
 #     next to the clip (<out>.check.png): look at it before moving on.
+#   - the model's part count is read from the built page; under --min-parts (40, the anatomy
+#     "Figure" scale) the script stops: a dozen boxes is a toy, not an anatomy figure. Pass
+#     --min-parts 0 only for a deliberately simple object, and say why in the storyboard notes.
 # --stills-only renders five stills of the built page into <out dir>/stills/ and stops.
 set -euo pipefail
 proj=$(cd "$1" && pwd); shotfile=$(realpath "$2"); timeline=$(realpath "$3"); id="$4"; out=$(realpath -m "$5"); shift 5
-ratio=16:9; jobs=3; step=8; most=6; stills=0
+ratio=16:9; jobs=3; step=8; most=6; stills=0; minparts=40
 while [ $# -gt 0 ]; do
   case "$1" in
     --ratio) ratio="$2"; shift 2;; --jobs) jobs="$2"; shift 2;; --step) step="$2"; shift 2;;
-    --most) most="$2"; shift 2;; --stills-only) stills=1; shift;; *) echo "unknown option $1"; exit 2;;
+    --most) most="$2"; shift 2;; --stills-only) stills=1; shift;; --min-parts) minparts="$2"; shift 2;;
+    *) echo "unknown option $1"; exit 2;;
   esac
 done
 command -v magick >/dev/null || export MAGICK="${MAGICK:-convert}"
@@ -28,6 +32,13 @@ cd "$proj"
 [ -f motion/build-shot.mjs ] || node "$(dirname "$0")/setup_shots.mjs" "$proj"
 page="motion/shots/$id.html"
 node motion/build-shot.mjs --shot "$shotfile" --timeline "$timeline" --id "$id" --ratio "$ratio" --out "shots/$id.html" | tail -1
+parts=$(grep -o '"counts":{"parts":[0-9]*' "$page" | head -1 | grep -o '[0-9]*$' || true)
+echo "model: ${parts:-?} parts"
+if [ -n "$parts" ] && [ "$parts" -lt "$minparts" ]; then
+  echo "the model has $parts parts, under the minimum of $minparts (40 is the anatomy Figure scale). Model the parts the narration names" >&2
+  echo "and the ones a viewer needs to recognise the object (see references/anatomy-route.md 2 and 5)." >&2
+  exit 1
+fi
 dur=$(node -e "const t=require('$timeline');console.log(t.shots.find(s=>s.id==='$id').duration)")
 mkdir -p "$(dirname "$out")"
 if [ "$stills" = 1 ]; then

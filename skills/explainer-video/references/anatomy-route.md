@@ -23,7 +23,7 @@ git clone https://github.com/annnguyentt/anatomy-reveal-skill ~/.claude/skills/a
 
 **用之前先读它们的 SKILL.md 和 references**（anatomy 的 `craft.md`；anatomy-reveal 的 `inputs.md`、`objects.md`、`object.md`、`shots.md`），按它们的规则来做。本文件只讲怎么把它们接进讲解视频的流程。
 
-如果这两个都装不上（比如没有网络），就按第 5 节用 Three.js 按同样的方法自己做，并告诉用户用的是替代方案。
+如果这两个都装不上（比如没有网络），就按第 6 节用 Three.js 按同样的方法自己做，并告诉用户用的是替代方案。
 
 ## 2. 方法要点
 
@@ -34,7 +34,8 @@ git clone https://github.com/annnguyentt/anatomy-reveal-skill ~/.claude/skills/a
 3. **零件要多、要真实。** 每个零件都得有作用，并且安装在另一个零件上；不要为了好看加装饰。放大 4 倍看，每个区域都还有真实的细节可看。
 4. **按真实的拆法分组。** 拆开的顺序就是这个东西在工作台上实际拆开的顺序，外面的零件先拆。
 5. **一到两个特性零件真的会动。** 选这个东西最核心的动作，比如开合、旋转、按压、喷射。
-6. **事先定好规模。**
+6. **说到的部件都要在模型里，并且看得见。** 列出口播会提到的每个部件（比如“风扇”“气瓶”“喷口”“裙边”），逐个确认模型里有、镜头里能看到：拆开、剖面或者推近。只做一个外壳转来转去，观众看到的就只是一个玩具。
+7. **事先定好规模。**
    - Figure：40–80 个零件。
    - Hero：100–150 个零件，2–4 小时。
    - Epic：整辆车、整栋建筑这种级别，6 小时以上，不要直接做。先给用户一个 Hero 版本：保留核心，细节只花在镜头会推近的 2–3 个区域，其余部分做成干净的大零件。
@@ -50,6 +51,7 @@ git clone https://github.com/annnguyentt/anatomy-reveal-skill ~/.claude/skills/a
    - 改 `object/geometry.mjs` 和 `object/film.mjs`，建模经验见第 5 节；
    - 每改一轮都运行 `node object/test-page.mjs --light`（报 interlock 就修），再用 `object/shots.mjs` 截几个角度看；
    - 收尾时从五个角度运行 `node object/scan-apart.mjs <yaw> <pitch>`，直到全部报告 “no pairs pass through each other”。
+   - `render_shot.sh` 构建时会读出零件数，少于 40（Figure 级）就停下。确实是很简单的物体时，加 `--min-parts 0`，并在分镜的 `notes` 里写明原因。
 3. **每个 R1 镜头一个关键帧文件**：`shots/<id>.mjs`，从 `templates/anatomy-shot.mjs` 改。
    - `make(shot)` 拿到这个镜头在 `audio/timeline.json` 里的时长和句子时间，返回以秒为单位的关键帧。
    - 动作要挂在句子上：比如 `L.L002.start + 1.6` 开始翻转。

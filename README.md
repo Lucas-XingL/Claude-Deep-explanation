@@ -2,7 +2,7 @@
 
 一个通用的 agent skill：把一个选题做成有配音、字幕和动画的**科普讲解视频或短纪录片（MP4）**。
 
-核心方法：先研究并给事实分级；再写脚本、做分镜；配音先行排出时间轴；然后用代码逐帧渲染画面（Remotion、HyperFrames、Manim、Canvas、p5、Three.js 或 anatomy 等距剖解）；最后用 ffmpeg 合成，并抽帧自检。视频模型只用来补代码画不了的镜头。
+核心方法：先研究并给事实分级；再写全片脚本、做分镜，生成一个方案页（脚本、分镜、关键画面、试听、待确认事项）给用户确认；确认后配音先行排出时间轴；然后用代码逐帧渲染画面（Remotion、HyperFrames、Manim、Canvas、p5、Three.js 或 anatomy 等距剖解）；最后用 ffmpeg 合成，并抽帧自检。视频模型只用来补代码画不了的镜头。
 
 ## 覆盖的题型
 
@@ -59,7 +59,7 @@ git clone https://github.com/annnguyentt/anatomy-reveal-skill ~/.claude/skills/a
 bash skills/explainer-video/examples/mini/run.sh
 ```
 
-这个示例有 3 个镜头、约 24 秒，讲“齿轮为什么能变慢变有劲”。它会依次完成：用占位音生成分句配音 → 生成时间轴和字幕 → 逐帧渲染三个 HTML 场景 → 合成（带字幕，响度 −16 LUFS）→ 生成接触表并做技术检查。成片在 `examples/mini/out/final.mp4`。在一台普通的云端容器上大约要 2 分钟。
+这个示例有 3 个镜头、约 24 秒，讲“齿轮为什么能变慢变有劲”。它按 skill 的顺序走：结构检查 → 估算时间轴 → 出风格帧 → 生成方案页 `examples/mini/plan/index.html` → 用占位音生成分句配音 → 时间轴和字幕 → 逐帧渲染三个 HTML 场景 → 合成（带字幕，响度 −16 LUFS）→ 接触表和逐句画面检查。成片在 `examples/mini/out/final.mp4`。在一台普通的云端容器上大约要 2 分钟。真实项目里，生成方案页之后要停下来等用户确认。
 
 把 `run.sh` 里的 `--engine placeholder` 换成真实的 TTS，就能听到配音。
 
@@ -79,12 +79,12 @@ skills/explainer-video/
     visual-routes.md       R1–R9 视觉路线的做法、提示词结构和常见坑
     anatomy-route.md       剖解路线和 Roadster 的完整方案
     render.md              逐帧渲染约定、各渲染器命令、合成、竖版剪辑
-    verify.md              检查清单和交付说明
+    verify.md              方案页和成片的检查清单、交付说明
     rights.md              素材、肖像、商标
   templates/               brief.md、choice-card.md、style.json、scene.html、
                            scene-paper.html 和 paper.css（纸面风 2D 场景）、model.js（数值模型）、
                            anatomy-shot.mjs（anatomy 镜头关键帧）、sfx.py（模型驱动的音效）、
-                           research-brief.md（研究子代理的任务说明）
+                           research-brief.md（研究子代理的任务说明）、plan.html（方案页模板）
   scripts/
     tts_lines.py           分句配音（自定义命令、edge-tts 或占位音）
     timeline.py            分镜 + 脚本 + 配音 → timeline.json、narration.wav、subs.srt
@@ -97,7 +97,9 @@ skills/explainer-video/
     anatomy/render_shot.sh    一个 anatomy 镜头：构建、并行渲染、编码、检查时长、导出检查帧
     anatomy/sprite.sh         从 anatomy 模型抠出透明背景的贴图，给 2D 场景用
     contact_sheet.sh       接触表，检查黑帧、定格和响度
-    lint_project.py        结构检查：句子编号、事实编号、等级、来源、镜头字段是否对得上
+    lint_project.py        结构检查：编号、等级、来源、口径、归属词、镜头字段和母版资产是否对得上
+    make_plan.py           生成方案页 plan/index.html，用户确认后再做全片
+    check_sync.py          逐句检查成片画面有没有变化，抓“口播在讲、画面不动”
   examples/mini/           能跑通的最小工程
 ```
 

@@ -35,7 +35,7 @@
 # 按时间轴渲染一个镜头（时长、尺寸、帧率和句子时间都从 timeline.json 读取）
 node scripts/capture_frames.mjs scenes/S05/index.html --timeline audio/timeline.json --shot S05 --out scenes/S05/clip.mp4
 
-# 只出三张静帧来检查（第 7 步每个镜头做完都要做）
+# 只出三张静帧来检查（第 8 步每个镜头做完都要做；第 6 步的风格帧也这样出）
 node scripts/capture_frames.mjs scenes/S05/index.html --timeline audio/timeline.json --shot S05 --stills 0,3.2,6.4 --out check/S05
 
 # 竖版
