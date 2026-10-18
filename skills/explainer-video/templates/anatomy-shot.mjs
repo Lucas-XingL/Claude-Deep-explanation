@@ -3,7 +3,8 @@
 //
 // make(shot) gets the shot's entry from audio/timeline.json:
 //   shot.duration                      seconds
-//   shot.lines = [{ id, start, end }]  narration times relative to the start of the shot
+//   shot.lines = [{ id, start, end, words }]  narration times relative to the start of the shot;
+//                                      words = [{ text, start, end }] when the voice has word timings
 // and returns { keys, labels } in seconds (no retiming happens).
 //
 // Rules learned the hard way:
@@ -12,14 +13,29 @@
 //   its first later value from the very start.
 // - A channel that should stay put and then move (apart at 0 until the question, then 1) needs a
 //   "hold" key where the move starts ({ t: x0, apart: 0 }); otherwise it interpolates from t = 0.
-// - Tie moments to words: use L.<id>.start / .end rather than hard-coded seconds, so a re-recorded
-//   line moves the motion with it.
+// - Tie moments to words: use L.<id>.start / .end, or W("L007", "风扇") for the moment that word is
+//   spoken, rather than hard-coded seconds, so a re-recorded line moves the motion with it.
 // - The last shot pose should equal the next shot's first pose if the cut is a match cut.
 // - ease is the ease INTO a key: "io" for moves, "lin" for drifts and running machinery,
 //   "whip" (≈0.24 s) to change subject, "o" for an explode, "so"/"si" to settle/start.
 // - Feature channels must not reuse the camera names (yaw, pitch, roll, zoom, panX, panY, focus).
+// When `phrase` is spoken in line `id` (falls back to its position in the text without word timings).
+function wordTime(shot, id, phrase) {
+  const SKIP = /[\s，。！？；：、,.!?;:“”"'（）()《》—…·-]/g, l = shot.lines.find((x) => x.id === id);
+  if (!l) return 0;
+  const p = phrase.replace(SKIP, "");
+  if (l.words?.length) {
+    let s = ""; const at = [];
+    for (const w of l.words) { const cs = [...w.text.replace(SKIP, "")]; cs.forEach((c, k) => { s += c; at.push(w.start + (w.end - w.start) * k / cs.length); }); }
+    const k = s.indexOf(p); if (k >= 0) return at[[...s.slice(0, k)].length];
+  }
+  const txt = (l.text || "").replace(SKIP, ""), k = txt.indexOf(p);
+  return k < 0 ? l.start : l.start + (l.end - l.start) * [...txt.slice(0, k)].length / Math.max(1, [...txt].length);
+}
+
 export function make(shot) {
   const L = Object.fromEntries(shot.lines.map((l) => [l.id, l]));
+  const W = (id, phrase) => wordTime(shot, id, phrase);
   const D = shot.duration;
   const first = shot.lines[0] ?? { start: 0, end: D };
   const x0 = first.end - 1.2; // e.g. come apart near the end of the first line

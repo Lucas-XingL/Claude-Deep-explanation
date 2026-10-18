@@ -7,3 +7,5 @@ audio/
 **/motion/shots/*.html
 **/motion/motion.html
 **/object/*.html
+*.inputs.json
+*.inputs.sha256

@@ -108,16 +108,17 @@ compatibility: 任何能执行 shell、读写文件、能看图片的 agent（Cl
 
 ### 7. 配音和时间轴
 按 `references/audio.md` 处理：
-1. `scripts/tts_lines.py` 生成全部分句配音；
+1. `scripts/tts_lines.py` 生成全部分句配音；用 edge-tts 时同时存下逐词时间，画面可以卡在某个词上；
 2. `scripts/check_tts.py` 转写回文字，核对读音；
-3. `scripts/timeline.py` 生成时间轴、整条配音和字幕；
-4. `scripts/make_bed.py` 合成音床（没有授权音乐时用）；
+3. `scripts/timeline.py` 生成时间轴（带逐词时间）、整条配音和字幕；
+4. 没有授权音乐时，`scripts/make_bed.py --timeline audio/timeline.json --storyboard storyboard.json` 按片子的结构合成配乐：首尾呼应的动机、段落换和声、层次逐渐加厚、在分镜 `accents` 标的揭示处加重音、最后收束；
 5. 从 `templates/sfx.py` 改出音效脚本，时间点取自模型。
 
 ### 8. 制作镜头
 按 `references/visual-routes.md` 制作，anatomy 路线见 `references/anatomy-route.md`。
 - **标了 `risks` 的镜头先预检**：关键动作看前中后三帧，跨句的连续镜头看句子交界两侧（`directing.md` 第 8 节）。
-- **2D 场景**（图解、推导、受力、读数）：从 `templates/scene-paper.html` 改（纸面风，和 anatomy 镜头同一个外观），用 `scripts/capture_frames.mjs --timeline … --shot …` 渲染。
+- **2D 场景**（图解、推导、受力、读数）：从 `templates/scene-paper.html` 改（纸面风，和 anatomy 镜头同一个外观），用 `scripts/capture_frames.mjs --timeline … --shot …` 渲染。说到某个词时要发生的动作用 `atWord(t, "L007", "风扇")`。
+- **渲染命令可以放心重跑**：`capture_frames.mjs` 和 `render_shot.sh` 会跳过输入没变的镜头；改了一句口播，就把全部渲染命令再跑一遍，只有受影响的镜头会重渲。`capture_frames.mjs` 每次还会乱序复查几帧，场景依赖上一帧时会报错。
 - **anatomy 镜头**：每个镜头一个 `shots/<id>.mjs`（模板 `templates/anatomy-shot.mjs`），用 `scripts/anatomy/render_shot.sh` 构建、并行渲染、编码，并检查时长。模型少于 40 个零件时它会停下（`--min-parts`）。
 - **开场**：`scripts/footage.sh` 截取、裁切、加署名，并导出最后一帧和线稿；`templates/scene-reveal.html` 做“真实画面 → 线稿 → 模型”的转场。
 - 其他渲染器（Remotion、Manim、Blender 等）的输出同样放到 `scenes/<id>/clip.mp4`。
@@ -143,6 +144,7 @@ python3 scripts/check_sync.py <proj>
 |---|---|---|
 | 写完脚本、分镜，以及方案页之前 | `lint_project.py` | 句子、事实编号对不上；事实没有等级或来源；宣称说得像事实、估算说得像事实；数字没有口径；镜头用的素材不在母版资产里；开场不是真实画面；真实画面或 AI 还原没有署名和角标 |
 | 用户确认之前 | `make_plan.py` | 没给用户看方案就开始配音和渲染 |
+| 每个 2D 镜头 | `capture_frames.mjs` | 画面依赖上一帧状态的场景（乱序复查，退出码 3） |
 | 每个 anatomy 镜头 | `render_shot.sh` | 零件太少的模型；片段长度和时间轴对不上；没看过的成片帧（导出检查帧） |
 | 合成之后 | `contact_sheet.sh` | 黑帧、超过 4 秒的定格、响度不对 |
 | 合成之后 | `check_sync.py` | 口播在往下讲、画面却没有变化的句子（有意停留的镜头在分镜里写 `hold` 和理由） |
@@ -200,12 +202,12 @@ python3 scripts/check_sync.py <proj>
 
 | 文件 | 作用 |
 |---|---|
-| `scripts/tts_lines.py` | 分句配音（自定义命令、edge-tts 或占位音） |
-| `scripts/check_tts.py` | 把配音转写回文字、和脚本对比（faster-whisper） |
-| `scripts/timeline.py` | 分镜加脚本加配音 → timeline.json、narration.wav、subs.srt |
-| `scripts/capture_frames.mjs` | HTML 场景逐帧渲染（虚拟时钟、固定随机种子、CSS 和 GSAP 定位） |
+| `scripts/tts_lines.py` | 分句配音（自定义命令、edge-tts 或占位音）；edge-tts 同时存逐词时间 |
+| `scripts/check_tts.py` | 把配音转写回文字、和脚本对比（faster-whisper）；`--save-words` 给其他 TTS 补逐词时间 |
+| `scripts/timeline.py` | 分镜加脚本加配音 → timeline.json（带逐词时间）、narration.wav、subs.srt |
+| `scripts/capture_frames.mjs` | HTML 场景逐帧渲染（虚拟时钟、固定随机种子、CSS 和 GSAP 定位）；输入没变就跳过；乱序复查 |
 | `scripts/assemble.py` | 拼接、混音（配音、音床避让、音效）、统一响度、字幕；缺镜头时出占位卡 |
-| `scripts/make_bed.py` | 合成环境音床 |
+| `scripts/make_bed.py` | 按片子结构合成配乐（动机、段落、层次、重音、收束），或一段平稳音床 |
 | `scripts/beats.py` | 音乐节拍，用来对齐镜头边界 |
 | `scripts/contact_sheet.sh` | 接触表，检查黑帧、定格和响度 |
 | `scripts/lint_project.py` | 结构检查：编号、等级、来源、口径、归属词、镜头字段和母版资产是否对得上 |
@@ -213,7 +215,7 @@ python3 scripts/check_sync.py <proj>
 | `scripts/check_sync.py` | 逐句检查成片画面有没有变化 |
 | `scripts/footage.sh` | 开场素材：截取、裁切、统一画幅、加署名，导出最后一帧和线稿 |
 | `scripts/anatomy/setup_shots.mjs` | 让 anatomy-reveal 工程支持按镜头构建 |
-| `scripts/anatomy/render_shot.sh` | 构建、并行渲染、编码一个 anatomy 镜头，并检查时长、导出检查帧 |
+| `scripts/anatomy/render_shot.sh` | 构建、并行渲染、编码一个 anatomy 镜头，并检查时长、导出检查帧；输入没变就跳过 |
 | `scripts/anatomy/sprite.sh` | 从 anatomy 模型抠出透明背景的贴图 |
 | `templates/plan.html` | 方案页的页面模板（由 `make_plan.py` 填数据） |
 | `templates/scene-reveal.html` | 开场转场：真实画面 → 线稿 → 我们的模型 |
@@ -234,7 +236,7 @@ python3 scripts/check_sync.py <proj>
 | `references/research.md` | 第 1 步：研究方法、证据分级、时效性 |
 | `references/script.md` | 第 4 步：口播结构、句子规则、字数、宣称的说法 |
 | `references/storyboard.md` | 第 5、6 步：分镜表格式、镜头规则、方案页用的 `frames` |
-| `references/directing.md` | 第 4、5、8 步：主线、画面配方、关系和画法、常见画面错误、受力检查、风格帧和预检、倒查 |
+| `references/directing.md` | 第 4、5、8 步：主线、画面配方、关系和画法、常见画面错误、受力检查、风格帧和预检、倒查、参考视频 |
 | `references/audio.md` | 第 6（试听）、7 步：配音、时间轴、字幕、音乐、音效 |
 | `references/visual-routes.md` | 第 6、8 步：每条视觉路线的做法 |
 | `references/anatomy-route.md` | 用 R1 剖解路线时：接入流程、建模经验、坑 |

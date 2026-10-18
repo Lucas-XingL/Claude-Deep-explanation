@@ -2,7 +2,7 @@
 # Build and render one storyboard shot from an anatomy-reveal project into scenes/<id>/clip.mp4.
 #
 #   bash render_shot.sh <anatomy project> <shot.mjs> <timeline.json> <id> <out clip.mp4> \
-#        [--ratio 16:9] [--jobs 3] [--step 8] [--most 6] [--stills-only] [--min-parts 40]
+#        [--ratio 16:9] [--jobs 3] [--step 8] [--most 6] [--stills-only] [--min-parts 40] [--force]
 #
 # What it takes care of (each one cost us a render):
 #   - render.mjs takes positional args; in blur mode the unused third one swallows the next
@@ -15,17 +15,29 @@
 #   - the model's part count is read from the built page; under --min-parts (40, the anatomy
 #     "Figure" scale) the script stops: a dozen boxes is a toy, not an anatomy figure. Pass
 #     --min-parts 0 only for a deliberately simple object, and say why in the storyboard notes.
+#   - a shot whose object, keys, timing and options are unchanged is not rendered again
+#     (<out>.inputs.sha256 records them); --force renders it anyway.
 # --stills-only renders five stills of the built page into <out dir>/stills/ and stops.
 set -euo pipefail
 proj=$(cd "$1" && pwd); shotfile=$(realpath "$2"); timeline=$(realpath "$3"); id="$4"; out=$(realpath -m "$5"); shift 5
-ratio=16:9; jobs=3; step=8; most=6; stills=0; minparts=40
+ratio=16:9; jobs=3; step=8; most=6; stills=0; minparts=40; force=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --ratio) ratio="$2"; shift 2;; --jobs) jobs="$2"; shift 2;; --step) step="$2"; shift 2;;
     --most) most="$2"; shift 2;; --stills-only) stills=1; shift;; --min-parts) minparts="$2"; shift 2;;
+    --force) force=1; shift;;
     *) echo "unknown option $1"; exit 2;;
   esac
 done
+# Cache: the object's code, this shot's keys, its timing and the options, hashed together.
+key=$( { cat "$shotfile"
+  find "$proj/object" "$proj/motion" "$proj/kit" -type f \( -name '*.mjs' -o -name '*.js' -o -name '*.css' -o -name '*.json' \) \
+       -not -path '*/motion/shots/*' -print0 2>/dev/null | sort -z | xargs -0 cat
+  node -e "const t=require('$timeline');console.log(JSON.stringify(t.shots.find(s=>s.id==='$id')))"
+  echo "$ratio $step $most"; cat "$0"; } | sha256sum | cut -c1-64)
+if [ "$stills" = 0 ] && [ "$force" = 0 ] && [ -f "$out" ] && [ "$(cat "$out.inputs.sha256" 2>/dev/null)" = "$key" ]; then
+  echo "cached: $out (object, keys, timing and options unchanged; --force to render again)"; exit 0
+fi
 command -v magick >/dev/null || export MAGICK="${MAGICK:-convert}"
 [ -n "${CHROME_PATH:-}" ] || for c in /opt/pw-browsers/chromium /usr/bin/chromium /usr/bin/google-chrome; do [ -x "$c" ] && export CHROME_PATH="$c" && break; done
 cd "$proj"
@@ -59,4 +71,5 @@ node motion/encode.mjs "$frames" "$out" | tail -1
 got=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$out")
 node -e "const g=$got,d=$dur;if(Math.abs(g-d)>0.1){console.error('clip is '+g+' s, shot is '+d+' s');process.exit(1)}"
 ffmpeg -v error -y -ss "$(node -e "console.log($dur/2)")" -i "$out" -frames:v 1 "$out.check.png"
+echo "$key" > "$out.inputs.sha256"
 echo "ok: $out (${got}s) · check frame: $out.check.png"

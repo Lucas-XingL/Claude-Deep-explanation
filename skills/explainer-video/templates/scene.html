@@ -55,6 +55,22 @@ const line = (id) => SHOT.lines.find((l) => l.id === id) || null;
 const onLine = (t, id, lead = 0.15) => { const l = line(id); return l ? seg(t, l.start - lead, l.end) : 0; };
 // A short pulse starting when the line starts: for "appear exactly when it is said".
 const atLine = (t, id, len = 0.6, lead = 0.1) => { const l = line(id); return l ? ease.out(seg(t, l.start - lead, l.start - lead + len)) : 0; };
+// The moment a word or phrase is spoken in line `id` (seconds, same clock as the line). Uses the
+// word timings in SHOT.lines[].words (edge-tts, or check_tts.py --save-words); without them, or
+// when the phrase is not found, it falls back to the phrase's position in the line's text.
+const SKIP = /[\s，。！？；：、,.!?;:“”"'（）()《》—…·-]/g;
+const wordAt = (id, phrase) => {
+  const l = line(id); if (!l) return null;
+  const p = phrase.replace(SKIP, "");
+  if (l.words && l.words.length) {
+    let s = ""; const at = [];
+    for (const w of l.words) { const cs = [...w.text.replace(SKIP, "")]; cs.forEach((c, k) => { s += c; at.push(w.start + (w.end - w.start) * k / cs.length); }); }
+    const k = s.indexOf(p); if (k >= 0) return at[[...s.slice(0, k)].length];
+  }
+  const txt = [...(l.text || "").replace(SKIP, "")], k = txt.join("").indexOf(p);
+  return k < 0 ? l.start : l.start + (l.end - l.start) * [...txt.join("").slice(0, k)].length / Math.max(1, txt.length);
+};
+const atWord = (t, id, phrase, len = 0.5, lead = 0.08) => { const w = wordAt(id, phrase); return w == null ? 0 : ease.out(seg(t, w - lead, w - lead + len)); };
 
 function text(str, x, y, { size = 48, color = STYLE.ink, weight = 600, align = "left", font = STYLE.font, alpha = 1 } = {}) {
   g.save(); g.globalAlpha = alpha; g.fillStyle = color; g.textAlign = align; g.textBaseline = "alphabetic";

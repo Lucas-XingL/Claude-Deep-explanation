@@ -14,6 +14,15 @@
 //   --frames <dir>                 also keep every frame as JPEG
 //   --png                          lossless frames into the encoder (slower, larger)
 //   --crf 16                       x264 quality for the clip
+//   --force                        render even when nothing changed (see the cache below)
+//   --no-seek-check                skip the out-of-order check (see below)
+//
+// Cache: the clip is skipped when <out>.inputs.json says it was made from the same files (every
+// local file the page loaded: the scene, model.js, css, images…), the same shot timing and the
+// same options. Change any of them and the clip is rendered again.
+// Seek check: a few frames are rendered again out of order (from the end back to the start) and
+// compared with the frames rendered in order. A difference means the scene draws from state left
+// by earlier frames instead of from t alone; the clip is still written but the exit code is 3.
 //
 // The page contract (see references/render.md):
 //   window.SCENE      {width, height, fps, duration}  set by this script before the page runs
@@ -24,10 +33,11 @@
 // requestAnimationFrame/performance.now/Date.now (virtual clock), with Math.random seeded.
 
 import { spawn, execSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { resolve, dirname, join, extname } from "node:path";
-import { pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
 
 function parseArgs(argv) {
   const a = { _: [] };
@@ -74,6 +84,20 @@ const width = Number(args.width || tl?.width || 1920);
 const height = Number(args.height || tl?.height || 1080);
 let duration = Number(args.duration || shot?.duration || 0);
 
+// ---- cache: skip a clip whose inputs have not changed ----
+const sha = (data) => createHash("sha256").update(data).digest("hex");
+const params = JSON.stringify({ shot, fps, width, height, duration, crf: args.crf || 16, png: !!args.png,
+                                tool: sha(readFileSync(fileURLToPath(import.meta.url))) });
+const inputsKey = (files) => sha(params + files.map((f) => f + ":" + (existsSync(f) ? sha(readFileSync(f)) : "missing")).join("|"));
+const record = args.out && !args.stills ? resolve(args.out) + ".inputs.json" : null;
+if (record && !args.force && existsSync(resolve(args.out)) && existsSync(record)) {
+  const before = JSON.parse(readFileSync(record, "utf8"));
+  if (before.key === inputsKey(before.files)) {
+    console.log(`cached: ${args.out} (same scene files, timing and options; --force to render again)`);
+    process.exit(0);
+  }
+}
+
 const chromium = await loadChromium();
 const browser = await chromium.launch({
   executablePath: process.env.CHROME_PATH || undefined,
@@ -83,6 +107,8 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
 page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") console.error(`[page ${m.type()}] ${m.text()}`); });
 page.on("pageerror", (e) => console.error(`[page error] ${e.message}`));
+const loaded = new Set([resolve(page_path)]);
+page.on("request", (r) => { if (r.url().startsWith("file:")) loaded.add(fileURLToPath(r.url().split("#")[0].split("?")[0])); });
 
 const init = { SCENE: { width, height, fps, duration }, SHOT: shot ? { id: shot.id, duration: shot.duration, lines: shot.lines } : null };
 await page.addInitScript((init) => {
@@ -143,16 +169,37 @@ const ff = spawn("ffmpeg", ["-v", "error", "-y", "-f", "image2pipe", "-framerate
   "-pix_fmt", "yuv420p", "-r", String(fps), "-movflags", "+faststart", out], { stdio: ["pipe", "inherit", "inherit"] });
 const done = new Promise((res, rej) => ff.on("close", (c) => (c === 0 ? res() : rej(new Error(`ffmpeg exited ${c}`)))));
 
+// Frames rendered in order and kept for the seek check, by frame index.
+const checkAt = args["no-seek-check"] || total < 4 ? [] : [0.8, 0.2, 0.5].map((f) => Math.floor(f * (total - 1)));
+const inOrder = new Map();
 const t0 = Date.now();
 for (let i = 0; i < total; i++) {
   const t = i / fps;
   await page.evaluate((t) => window.__seek(t), t);
+  if (checkAt.includes(i)) inOrder.set(i, sha(await shoot("png")));
   const buf = await shoot(png ? "png" : "jpeg");
   if (args.frames) writeFileSync(join(args.frames, `f_${String(i).padStart(5, "0")}.${png ? "png" : "jpg"}`), buf);
   if (!ff.stdin.write(buf)) await new Promise((r) => ff.stdin.once("drain", r));
   if (i % fps === 0) process.stdout.write(`\r${shot?.id || "scene"} ${(t).toFixed(0)}/${duration.toFixed(1)}s`);
 }
 ff.stdin.end();
+// Seek check: from the end, jump back to the same frames out of order and compare.
+const differs = [];
+if (checkAt.length) {
+  await page.evaluate((t) => window.__seek(t), (total - 1) / fps);
+  for (const i of [checkAt[1], checkAt[0], checkAt[2]]) {
+    await page.evaluate((t) => window.__seek(t), i / fps);
+    if (sha(await shoot("png")) !== inOrder.get(i)) differs.push((i / fps).toFixed(2));
+  }
+}
 await done;
 await browser.close();
 console.log(`\nwrote ${out}  (${total} frames, ${width}×${height}@${fps}, ${((Date.now() - t0) / 1000).toFixed(1)}s)`);
+if (differs.length) {
+  console.error(`seek check: frames at ${differs.join(", ")} s look different when rendered out of order. The scene keeps ` +
+    "state between frames (an accumulator, a cache, Math.random called per frame); make it draw from t alone (see references/render.md).");
+  process.exit(3);
+}
+if (checkAt.length) console.log("seek check: ok");
+const files = [...loaded].sort();
+writeFileSync(record, JSON.stringify({ key: inputsKey(files), files }, null, 1));

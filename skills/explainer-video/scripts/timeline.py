@@ -13,6 +13,10 @@ Writes  <project>/audio/timeline.json   shot and line start/end times (seconds)
 
 Lines missing audio get an estimated duration (chars / 4.2 per second) and are
 reported, so the visuals can be blocked out before the voice-over exists.
+
+When a line's audio has word timings next to it (<Lxxx>.words.json, written by tts_lines.py
+for edge-tts or by check_tts.py --save-words), they are carried into timeline.json as
+lines[].words ({text, start, end}, same clock as the line) and used to time the subtitles.
 """
 import argparse, json, re, subprocess, sys, tempfile
 from pathlib import Path
@@ -91,6 +95,49 @@ def split_sub(text, max_chars):
     return [c.strip().rstrip(SUB_TRAIL) for c in chunks if c.strip().rstrip(SUB_TRAIL)]
 
 
+def load_words(audio, offset):
+    """Word timings saved next to a line's audio, moved onto the timeline clock."""
+    path = audio.with_suffix(".words.json") if audio else None
+    if not path or not path.exists():
+        return None
+    words = json.loads(path.read_text(encoding="utf-8"))
+    return [{"text": w["text"], "start": round(offset + w["start"], 3), "end": round(offset + w["end"], 3)}
+            for w in words if w.get("text")]
+
+
+SUB_SKIP = re.compile(r"[\s，。！？；：、,.!?;:“”\"'（）()《》—…·-]")
+
+
+def chunk_times(chunks, line):
+    """Start and end of each subtitle chunk: from the word timings when the spoken words are the
+    shown text, otherwise in proportion to the characters."""
+    words = line.get("words")
+    shown = "".join(SUB_SKIP.sub("", c) for c in chunks)
+    if words:
+        times, spoken = [], ""
+        for w in words:
+            chars = SUB_SKIP.sub("", w["text"])
+            for k, ch in enumerate(chars):
+                spoken += ch
+                times.append(w["start"] + (w["end"] - w["start"]) * k / max(1, len(chars)))
+        if spoken == shown and times:
+            out, i = [], 0
+            for n, c in enumerate(chunks):
+                m = len(SUB_SKIP.sub("", c))
+                start = line["start"] if n == 0 else times[min(i, len(times) - 1)]
+                i += m
+                end = line["end"] if n == len(chunks) - 1 else times[min(i, len(times) - 1)]
+                out.append((start, end))
+            return out
+    total_chars = sum(len(c) for c in chunks) or 1
+    out, cs = [], line["start"]
+    for c in chunks:
+        ce = cs + (line["end"] - line["start"]) * len(c) / total_chars
+        out.append((cs, ce))
+        cs = ce
+    return out
+
+
 def srt_time(t):
     ms = int(round(t * 1000))
     h, ms = divmod(ms, 3600000)
@@ -145,15 +192,26 @@ def main():
                 else:
                     dur = max(1.0, len(info["say"]) / 4.2)
                     missing.append(lid)
-                lines_out.append({"id": lid, "shot": sid, "text": info["text"], "start": round(t, 3),
-                                  "end": round(t + dur, 3), "audio": str(audio.relative_to(proj)) if audio else None})
+                entry = {"id": lid, "shot": sid, "text": info["text"], "start": round(t, 3),
+                         "end": round(t + dur, 3), "audio": str(audio.relative_to(proj)) if audio else None}
+                words = load_words(audio, t)
+                if words:
+                    entry["words"] = words
+                lines_out.append(entry)
                 t += dur
                 prev_section = info["section"]
             t += float(shot.get("post", 0.2))
         if i == len(board["shots"]) - 1:
             t += a.tail
-        shot_lines = [{"id": l["id"], "start": round(l["start"] - start, 3), "end": round(l["end"] - start, 3),
-                       "text": l["text"]} for l in lines_out if l["shot"] == sid]
+        shot_lines = []
+        for l in lines_out:
+            if l["shot"] != sid:
+                continue
+            rel = {"id": l["id"], "start": round(l["start"] - start, 3), "end": round(l["end"] - start, 3), "text": l["text"]}
+            if l.get("words"):
+                rel["words"] = [{"text": w["text"], "start": round(w["start"] - start, 3), "end": round(w["end"] - start, 3)}
+                                for w in l["words"]]
+            shot_lines.append(rel)
         shots_out.append({"id": sid, "start": round(start, 3), "end": round(t, 3),
                           "duration": round(t - start, 3), "lines": shot_lines})
 
@@ -167,13 +225,9 @@ def main():
     srt, n = [], 0
     for l in lines_out:
         chunks = split_sub(l["text"], a.max_chars)
-        total_chars = sum(len(c) for c in chunks) or 1
-        cs = l["start"]
-        for c in chunks:
-            ce = cs + (l["end"] - l["start"]) * len(c) / total_chars
+        for c, (cs, ce) in zip(chunks, chunk_times(chunks, l)):
             n += 1
             srt.append(f"{n}\n{srt_time(cs)} --> {srt_time(ce)}\n{c}\n")
-            cs = ce
     (out_dir / "subs.srt").write_text("\n".join(srt), encoding="utf-8")
 
     # Narration track: silence of the full length, each line mixed in at its start.

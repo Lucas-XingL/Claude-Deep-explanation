@@ -12,3 +12,6 @@ out/
 # Downloaded and conformed real material (often copyrighted): research/assets.md records how to fetch it again.
 **/raw/
 **/scenes/_shared/opening/
+# Render cache records (capture_frames.mjs, render_shot.sh)
+*.inputs.json
+*.inputs.sha256

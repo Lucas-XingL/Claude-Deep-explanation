@@ -15,6 +15,8 @@
 
 **在 TLS 被代理重新签名的环境里**（公司代理、云端沙箱），edge-tts 会报 `CERTIFICATE_VERIFY_FAILED`。原因是它只信任 certifi 自带的证书。解决办法是把代理的 CA 追加到 edge-tts 所在 Python 环境的 certifi 文件里：`cat <代理CA.crt> >> $(python -c "import certifi;print(certifi.where())")`。只改自己的虚拟环境，不要关闭证书校验。
 
+**逐词时间**：用 edge-tts 时，`tts_lines.py` 会在每句配音旁边存一个 `L007.words.json`，记下每个词从第几秒开始。`timeline.py` 把它带进时间轴（`lines[].words`），字幕也按词来切时间。场景里用 `atWord(t, "L007", "大气")` 让画面卡在说出“大气”的那一刻（anatomy 镜头用 `W("L007", "大气")`）。其他 TTS 没有逐词时间时，运行 `check_tts.py --save-words`，用语音识别补上。要注意，edge-tts 的分词有时很怪（比如切出“底气”“压变”），所以 `atWord` 按字符匹配，不按词匹配；同一句里出现两次的词，取第一次。
+
 **生成后先“听”一遍**：运行 `python3 scripts/check_tts.py <proj>`（需要 faster-whisper）。它会把每句配音转写回文字，和脚本对比，相似度低于 0.85 的句子会列出来。被标出的句子大多是同音字（比如擒纵→秦宗、机芯→鸡心），不一定是读错。逐句看一下，真正读错的才需要加 `<读作：…>` 重新生成。
 
 转写核对只能发现念错的字，听不出语气、停顿和重音是否自然，也听不出音乐是不是盖过了人声。agent 自己没法真正“听”，所以交付说明里要写明“没有人工试听”，请用户听一遍（见 `verify.md` 第 5、6 节）。
@@ -55,7 +57,12 @@ python3 scripts/timeline.py <proj>       # 读 storyboard.json 和 script.md，�
 ## 4. 背景音乐和卡点
 
 - **音乐要有授权**：无版权音乐库、用户提供的音乐，或者自己生成的音乐。在 `research/assets.md` 里登记来源（见 `rights.md`）。
-- **没有现成音乐时**，用 `python3 scripts/make_bed.py audio/bed.wav --seconds <总长> --mood calm|tension|bright` 合成一段简单的环境音床：慢速和弦铺底加低音，可以加轻微的节拍。它是从零合成的，不涉及授权问题，只适合垫在口播下面。
+- **没有现成音乐时，按片子的结构合成配乐**：
+  ```
+  python3 scripts/make_bed.py audio/bed.wav --timeline audio/timeline.json --storyboard storyboard.json --mood calm
+  ```
+  它不是一段循环，而是跟着片子走：开头一个短动机，结尾再出现一次，首尾呼应；每进入分镜里的一个新段落（`section`）换一个和弦，并有一声轻的气流声；层次随片子加厚（铺底 → 低音 → 节拍 → 琶音），结尾收回来；最后落在主和弦上淡出。在分镜镜头里写 `"accents": ["L010", "L007:大气"]`，会在那句话开头或那个词上加一个重音（上扬的气流声加一声低沉的“咚”），用在揭示答案、数字出现、机构动作的那一刻。长度正好等于片长，不循环、不补静音。从零合成，不涉及授权。只给 `--seconds` 时，仍然输出一段平稳的音床。
+- 重音不要多：一分钟两三个就够，放在真正的揭示处。配乐不能盖过口播，交付前要有人实际听一遍（agent 只能看波形，听不出好坏，在 `review.md` 里记“未做”）。
 - 默认把音量压到 0.22，有口播时自动再压低（sidechain ducking），整片响度统一到 −16 LUFS，适合网络平台。
 - **按节拍剪辑**（适合 MV 风格、开头和结尾、传播剪辑）：
   ```

@@ -7,7 +7,8 @@
     - MODES keyed by SHOT.id: one scene file serves several shots with different behaviour.
     - slowAt(t)/tauAt(t): slow motion that can change mid-shot while the machine time stays
       continuous (integrate the rate instead of multiplying t).
-    - Labels, highlights and arrows appear with the line that names them (atLine / during).
+    - Labels, highlights and arrows appear with the line that names them (atLine / during), or on
+      the very word (atWord), from the word timings edge-tts reports.
     - A sprite of the anatomy object (scripts/anatomy/sprite.sh) keeps 2D and 3D shots identical.
 -->
 <html lang="zh">
@@ -49,6 +50,23 @@ const eio = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 const line = (id) => SHOT.lines.find((l) => l.id === id) || null;
 // 0→1 just as line `id` starts (things that appear when they are named).
 const atLine = (t, id, len = 0.6, lead = 0.15) => { const l = line(id); return l ? eo(seg(t, l.start - lead, l.start - lead + len)) : 0; };
+// The moment a word or phrase is spoken in line `id` (seconds, same clock as the line). Uses the
+// word timings in SHOT.lines[].words (edge-tts, or check_tts.py --save-words); without them, or
+// when the phrase is not found, it falls back to the phrase's position in the line's text.
+const SKIP = /[\s，。！？；：、,.!?;:“”"'（）()《》—…·-]/g;
+const wordAt = (id, phrase) => {
+  const l = line(id); if (!l) return null;
+  const p = phrase.replace(SKIP, "");
+  if (l.words && l.words.length) {
+    let s = ""; const at = [];
+    for (const w of l.words) { const cs = [...w.text.replace(SKIP, "")]; cs.forEach((c, k) => { s += c; at.push(w.start + (w.end - w.start) * k / cs.length); }); }
+    const k = s.indexOf(p); if (k >= 0) return at[[...s.slice(0, k)].length];
+  }
+  const txt = [...(l.text || "").replace(SKIP, "")], k = txt.join("").indexOf(p);
+  return k < 0 ? l.start : l.start + (l.end - l.start) * [...txt.join("").slice(0, k)].length / Math.max(1, txt.length);
+};
+// 0→1 just as `phrase` is spoken in line `id`: "说到风扇，风扇就转" — atWord(t, "L007", "风扇").
+const atWord = (t, id, phrase, len = 0.5, lead = 0.08) => { const w = wordAt(id, phrase); return w == null ? 0 : eo(seg(t, w - lead, w - lead + len)); };
 // 1 while line `id` is spoken (plus a short tail), 0 otherwise (highlights that come and go).
 const during = (t, id) => { const l = line(id); return l ? seg(t, l.start - 0.2, l.start) * (1 - seg(t, l.end + 0.6, l.end + 1.0)) : 0; };
 

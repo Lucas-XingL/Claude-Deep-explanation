@@ -11,7 +11,7 @@
 | 对象 | 谁提供 | 内容 |
 |---|---|---|
 | `window.SCENE` | 渲染脚本 | `{width, height, fps, duration}`。场景按它排版，同一个文件能出 16:9 和 9:16 两种版本 |
-| `window.SHOT` | 渲染脚本（传了 `--timeline` 和 `--shot` 时） | `{id, duration, lines:[{id,start,end,text}]}`，句子时间是相对这个镜头开头的。用它让画面跟着口播走 |
+| `window.SHOT` | 渲染脚本（传了 `--timeline` 和 `--shot` 时） | `{id, duration, lines:[{id,start,end,text,words}]}`，时间都相对这个镜头开头。`words` 是逐词时间 `[{text,start,end}]`（edge-tts 配音才有，见 `audio.md`）。模板里的 `atLine(t, "L007")` 卡在句子开头，`atWord(t, "L007", "大气")` 卡在说出这个词的那一刻；没有逐词时间时，按这个词在句中的位置估算 |
 | `window.renderFrame(t)` | 场景 | 画出时间 t（秒）的画面，可以是 async 函数 |
 | `window.sceneReady` | 场景（可选） | Promise，字体、图片、模型都加载完再 resolve |
 
@@ -25,9 +25,11 @@
 
 场景里不要做的事：
 - 读真实时间；
-- 运动依赖上一帧的状态。比如物理模拟必须写成从 0 积分到 t，或者按固定步长、可重放的方式推进；
+- 运动依赖上一帧的状态。比如物理模拟必须写成从 0 积分到 t，或者按固定步长、可重放的方式推进。`capture_frames.mjs` 每次渲染完会把几帧打乱顺序重渲一遍做比对（乱序复查），对不上就报错（退出码 3）；
 - 用 fetch 读取 `file://` 下的文件。数据要内联，或者放在旁边的 `.js` 文件里，以 `window.DATA = …` 的形式加载；
 - 视频元素自动播放。真实视频素材请用 ffmpeg 处理（见 R7）。
+
+**缓存**：`capture_frames.mjs` 在 `clip.mp4` 旁边写一个 `clip.mp4.inputs.json`，记下这次渲染实际读取的本地文件（场景、`model.js`、样式、图片……）、镜头时间和选项。下次这些都没变，就直接跳过；改了任何一个就重新渲染。`render_shot.sh` 对 anatomy 镜头也一样（`clip.mp4.inputs.sha256`）。所以改了一句口播之后，可以放心地把所有镜头的渲染命令再跑一遍，只有时间变了的镜头会真正重渲。要强制重渲，加 `--force`。
 
 ## 3. 渲染命令
 

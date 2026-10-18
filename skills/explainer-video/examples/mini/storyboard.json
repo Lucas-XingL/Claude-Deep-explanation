@@ -51,7 +51,8 @@
       "change": "两个齿轮按 θ1(t) 咬合转动，齿数标签依次亮起",
       "result": "圈数计数器：小齿轮 3 圈时大齿轮 1 圈",
       "risks": ["key_action"],
-      "frames": [{"image": "plan/stills/S02/t_2.00.png", "caption": "L002：两个齿轮咬合，齿数标签亮起"}, {"image": "plan/stills/S02/t_11.00.png", "caption": "L004：计数器显示小齿轮 3 圈、大齿轮 1 圈"}]
+      "frames": [{"image": "plan/stills/S02/t_2.00.png", "caption": "L002：两个齿轮咬合，齿数标签亮起"}, {"image": "plan/stills/S02/t_11.00.png", "caption": "L004：计数器显示小齿轮 3 圈、大齿轮 1 圈"}],
+      "accents": ["L004:一圈"]
     },
     {
       "id": "S03",
