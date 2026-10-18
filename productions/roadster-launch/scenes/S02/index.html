@@ -44,7 +44,7 @@ const REVEAL = {
   // flip (rot 180 + mirror) plus the tilt. Width from the wheelbase (986 px between wheel centres).
   align: { x: 1152, y: 518, w: 1555, rot: 189.7, flip: true },
   credit: "画面：特斯拉官方直播，2026-10-15，经看看新闻转载",
-  badge: "官方画面",
+  badge: "",                                  // A-level official footage carries no badge (style.json)
   push: 0.04,
   t: { trace: 0.14, model: 0.42, settle: 0.62 },
   hint: "示意", readout: "倒挂 · 车上无人",
@@ -132,7 +132,7 @@ function draw(t) {
   }
   // Credit and badge stay while the picture or its lines are on screen (the lines are its likeness).
   const gt = fadePhoto < 1 ? gp : gm;
-  if (REVEAL.credit) label(gt, REVEAL.credit, W * 0.035, H * 0.06, 26, "0,0,0", fadePhoto, 1 - linesOut);
+  if (REVEAL.credit) label(gt, REVEAL.credit, W * 0.035, H * 0.06, 27, "0,0,0", fadePhoto, 1 - linesOut); // the size footage.sh burned into S01
   if (REVEAL.badge) label(gt, REVEAL.badge, W * 0.035, H * 0.06 + 52 * U, 24, "217,86,47", fadePhoto, 1 - linesOut);
   // Its lines, drawn on the paper with a left-to-right sweep (multiply: white disappears).
   if (edges && sweep > 0 && linesOut < 1) {

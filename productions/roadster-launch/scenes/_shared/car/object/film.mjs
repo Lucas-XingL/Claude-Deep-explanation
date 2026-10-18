@@ -23,8 +23,8 @@ export const FIGURE = {
   caption: "{parts} 个零件；外形是示意，不对应任何品牌外观。",
 };
 
-// shell, hi* and ground are the explainer's shot channels (end of file); default 0 leaves older shots as they were.
-export const FEATURE_DEFAULTS = { wheels: 0, fan: 0, skirt: 0, shell: 0, hiFan: 0, hiSkirt: 0, hiTank: 0, hiNozzle: 0, ground: 0 };
+// shell, hi*, ground and bigLines are the explainer's shot channels (end of file); default 0 leaves older shots as they were.
+export const FEATURE_DEFAULTS = { wheels: 0, fan: 0, skirt: 0, shell: 0, hiFan: 0, hiSkirt: 0, hiTank: 0, hiNozzle: 0, ground: 0, bigLines: 0 };
 
 export const FEATURE_KEYS = [
   { key: "w", channel: "wheels", name: "wheels", unit: "°", step: 90, ease: 0.2, verb: "rolls the wheels" },
@@ -56,11 +56,14 @@ export function featureTravel(a, b) {
 //   figure layer beneath every part, so a dropped skirt has a floor to meet.
 // Labels may set fig / title; hint / readout sit under them, out of the bottom 16 % subtitle band,
 //   and may hold "\n" for stacked lines.
+// Labels may set big: lines ("\n") set large in ink on the left, above the subtitle band; line i
+//   shows at opacity clamp(bigLines − i, 0, 1), rising into place as it fades in.
 const SHELL = { roof: 950, rearwindow: 900, windshield: 900, deck: 850, hood: 820, "sideglass.R": 1100, "sideglass.L": 1100, "door.R": 700, "door.L": 700 };
 const HIGHLIGHT = { hiFan: /^fan\.\d\./, hiSkirt: /^skirt\./, hiTank: /^(tank|feed)\./, hiNozzle: /^nozzle\./ };
 const PLATE_CSS = `.mo .mo-corner[data-c="hint"],.mo .mo-corner[data-c="readout"]{top:34px;bottom:auto;font-family:"Noto Sans CJK SC","Source Han Sans SC","PingFang SC","WenQuanYi Zen Hei",sans-serif;font-size:15px;line-height:1.55;letter-spacing:.02em;text-transform:none;white-space:pre;color:rgba(29,28,26,.88);background:rgba(244,241,234,.82);padding:3px 7px}
 .mo .mo-corner[data-c="hint"]{left:8px}.mo .mo-corner[data-c="readout"]{right:8px;text-align:right}.mo .mo-corner:empty{display:none}
-.mo [data-hl] [data-r^="plane"] path:not(.iso-line){fill:#ec7067!important;stroke:#5e0f0c!important}.mo [data-hl] [data-r^="plane"] circle{fill:#7a1a1c!important}`;
+.mo [data-hl] [data-r^="plane"] path:not(.iso-line){fill:#ec7067!important;stroke:#5e0f0c!important}.mo [data-hl] [data-r^="plane"] circle{fill:#7a1a1c!important}
+.mo .mo-big{position:absolute;left:58px;top:51%;font-family:ui-monospace,"SF Mono",Menlo,Consolas,"WenQuanYi Zen Hei",monospace;font-size:36px;line-height:1.42;letter-spacing:.08em;color:#1D1C1A;white-space:pre;pointer-events:none}`;
 let LOOK = null;
 function dress(s) {
   const root = document.querySelector(".mo");
@@ -80,6 +83,21 @@ function dress(s) {
   for (const c of ["fig", "title"]) {
     const el = root.querySelector(`.mo-corner[data-c="${c}"]`);
     if (s.label && s.label[c] !== undefined && el.textContent !== s.label[c]) el.textContent = s.label[c];
+  }
+  if (s.label && s.label.big !== undefined) {
+    if (!LOOK.big) {
+      root.insertAdjacentHTML("beforeend", `<div class="mo-big"></div>`);
+      LOOK.big = root.querySelector(".mo-big");
+    }
+    if (LOOK.big.dataset.src !== s.label.big) {
+      LOOK.big.replaceChildren(...s.label.big.split("\n").map((t) => Object.assign(document.createElement("div"), { textContent: t })));
+      LOOK.big.dataset.src = s.label.big;
+    }
+    [...LOOK.big.children].forEach((d, i) => {
+      const o = Math.max(0, Math.min(1, (s.bigLines ?? 0) - i));
+      d.style.opacity = o.toFixed(3);
+      d.style.transform = `translateY(${((1 - o) * 12).toFixed(2)}px)`;
+    });
   }
   const g = Math.max(0, Math.min(1, s.ground ?? 0));
   if (!g && !LOOK.ground) return;
