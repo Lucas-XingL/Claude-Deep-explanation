@@ -152,6 +152,7 @@ html += sec("脚本", `<div class="script">${P.script.map(([name, ls]) => `<div>
 html += sec("事实表", `<div class="tbl"><table><thead><tr><th>编号</th><th>事实</th><th>等级</th><th>口径</th><th>来源</th></tr></thead><tbody>${P.facts.map((f) => `
   <tr><td class="mono">${esc(f.id)}</td><td>${esc(f.text)}</td><td>${lv(f.level)}</td><td>${esc(f.scope)}</td><td>${esc(f.source)}</td></tr>`).join("")}</tbody></table></div>`);
 
+if (P.assets) html += sec("素材与授权", `<div class="md" style="max-width:none">${P.assets}</div>`, "research/assets.md：外部素材、生成图和它们的来源。引用的版权素材会在交付时再提醒一次。");
 if (P.model) html += sec("数值模型的输出", `<pre>${esc(P.model)}</pre>`, "口播里的数字都要和这里一致。");
 html += sec("结构检查", `<div class="lint">${P.lint.map((l) => `<div class="${l.startsWith("FAIL") ? "FAIL" : ""}">${esc(l)}</div>`).join("") || "<div>没有问题</div>"}</div>`, "lint_project.py 的结果。它只说明文件之间对得上，不说明内容正确。");
 

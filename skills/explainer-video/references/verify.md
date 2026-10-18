@@ -69,6 +69,7 @@ bash scripts/contact_sheet.sh out/final.mp4 check/final 5     # 每 5 秒一帧�
 - [ ] 需要署名的素材，署名出现在画面上，或者写在片尾
 - [ ] 没有真实人物的 AI 生成形象或克隆声音
 - [ ] 没有用受版权保护的角色或商标做主画面
+- [ ] 开场按 `footage.md` 第 6 节检查过：前 3 秒认得出对象；真实画面和 AI 还原画面一直有署名和角标；引用的版权画面够短
 
 ## 5. 检查结论怎么记（check/review.md）
 

@@ -11,7 +11,8 @@ research/assets.md and brief.md / choices.md:
     shots without lines have a duration, routes and risks are known values;
   - the full storyboard uses every script line; the directing fields are filled in
     (meta question/throughline/answer; per shot new_info/subject/relation/change/result);
-    every shot's asset is one of the storyboard's master assets;
+    every shot's asset is one of the storyboard's master assets; the film opens on a real picture
+    (R7) or a labelled AI recreation (R8), and those shots carry a credit;
   - a line citing a C or D fact says who claims it (说、称、据……); a line citing an E fact
     sounds like an estimate (算、约、如果……); numeric facts say what the number covers (口径).
 
@@ -144,6 +145,10 @@ def check_board(proj, path, script_texts, facts, full):
             report("WARN", where, "R1 镜头没有写 asset（用哪个剖解模型）")
         if "hold" in shot and not str(shot["hold"]).strip():
             report("WARN", where, "hold 要写原因，比如“让观众读完这张图”")
+        if route in ("R7", "R8") and not shot.get("credit"):
+            report("WARN", where, "真实画面或 AI 还原的镜头要写 credit（屏幕上的来源署名，见 footage.md）")
+        if route == "R8" and not any("AI" in str(x) for x in shot.get("onscreen", [])):
+            report("WARN", where, "R8 镜头的 onscreen 里要有“AI 还原画面”或“AI 生成画面”角标")
         for fr in shot.get("frames", []):
             if fr.get("image") and not (proj / fr["image"]).exists():
                 report("WARN", where, f"方案页的画面还不存在：{fr['image']}")
@@ -167,6 +172,10 @@ def check_board(proj, path, script_texts, facts, full):
         for text in shot.get("onscreen", []):
             if len(text) > MAX_ONSCREEN:
                 report("WARN", where, f"屏幕文字超过 {MAX_ONSCREEN} 字：{text}")
+    shots = board.get("shots", [])
+    if shots and "sample" not in name and shots[0].get("route") not in ("R7", "R8") and not meta.get("no_real_opening"):
+        report("WARN", name, "第一个镜头不是真实画面（R7）或 AI 还原（R8）。开场先给真实画面，见 footage.md；"
+               "有意不用，就在 meta 里写 no_real_opening 和理由")
     for k, sids in lacking.items():
         if sids:
             report("WARN", name, f"{len(sids)} 个镜头缺 {k}：{', '.join(sids)}（见 directing.md 第 1、2 节）")

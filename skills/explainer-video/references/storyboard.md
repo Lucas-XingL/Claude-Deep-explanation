@@ -76,6 +76,9 @@
 | `asset` | R1 必填 | 这个镜头用哪个母版资产，必须是 `assets` 里的一个键。同一个主体在不同镜头里要用同一个母版 |
 | `frames` | 否 | 方案页上展示的画面：`[{"image": "plan/stills/S03/t_2.00.png", "caption": "L007：……"}]`（见 SKILL.md 第 6 步） |
 | `hold` | 否 | 有意让画面停住时写原因，比如“让观众读完这张图”。`check_sync.py` 不会把这个镜头的句子报成静止 |
+| `credit` | R7、R8 必填 | 真实画面或 AI 还原画面在屏幕上的来源署名，比如“画面：特斯拉官方视频，2026-10-16” |
+
+**开场**：全片第一个镜头默认是真实画面（R7），拿不到时用标注过的 AI 还原（R8），接着用 reveal 镜头转进我们的动画，做法见 `footage.md`。有意不用真实画面开场时，在 `meta` 里写 `"no_real_opening": "理由"`。
 
 `meta` 里的 `question`、`throughline`、`answer` 是全片的问题、主线和回答（见 `directing.md` 第 1 节）。脚本和分镜都写好后，运行 `python3 scripts/lint_project.py <proj>` 检查句子编号、事实编号、镜头字段是否对得上。
 

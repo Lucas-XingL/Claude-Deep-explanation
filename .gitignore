@@ -9,3 +9,6 @@ out/
 **/plan/frames/
 **/plan/voice/
 **/plan/stills/
+# Downloaded and conformed real material (often copyrighted): research/assets.md records how to fetch it again.
+**/raw/
+**/scenes/_shared/opening/

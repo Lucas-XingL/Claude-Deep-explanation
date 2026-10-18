@@ -32,14 +32,26 @@ AUDIO_EXT = (".mp3", ".wav", ".m4a")
 
 def md(text):
     """A small Markdown subset (headings, lists, bold, code, links, paragraphs) to HTML."""
-    out, list_tag = [], None
+    out, list_tag, rows = [], None, []
     def inline(s):
         s = html.escape(s)
         s = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", s)
         s = re.sub(r"`(.+?)`", r"<code>\1</code>", s)
         return re.sub(r"\[(.+?)\]\((https?://[^)\s]+)\)", r'<a href="\2">\1</a>', s)
+    def flush_table():
+        if rows:
+            body = "".join("<tr>" + "".join(f"<{'th' if i == 0 else 'td'}>{inline(c)}</{'th' if i == 0 else 'td'}>"
+                                            for c in r) + "</tr>" for i, r in enumerate(rows))
+            out.append(f'<div class="tbl"><table>{body}</table></div>')
+            rows.clear()
     for raw in text.splitlines():
         line = raw.rstrip()
+        if line.lstrip().startswith("|"):
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            if not all(re.fullmatch(r":?-{3,}:?", c) for c in cells):
+                rows.append(cells)
+            continue
+        flush_table()
         m = re.match(r"^(\s*)([-*]|\d+\.)\s+(.*)$", line)
         if m:
             tag = "ol" if m.group(2)[0].isdigit() else "ul"
@@ -60,6 +72,7 @@ def md(text):
             out.append(f"<p>{inline(line.strip())}</p>")
     if list_tag:
         out.append(f"</{list_tag}>")
+    flush_table()
     return "\n".join(out)
 
 
@@ -225,6 +238,7 @@ def main():
         "meta": {k: board["meta"].get(k, "") for k in ("question", "throughline", "answer")},
         "brief": md(brief.read_text(encoding="utf-8")) if brief.exists() else "",
         "choices": md((proj / "choices.md").read_text(encoding="utf-8")) if (proj / "choices.md").exists() else "",
+        "assets": md((proj / "research/assets.md").read_text(encoding="utf-8")) if (proj / "research/assets.md").exists() else "",
         "decisions": read_decisions(plan / "decisions.md"),
         "duration": max((s["end"] for s in shots), default=0),
         "timing_measured": measured,

@@ -2,7 +2,7 @@
 
 一个通用的 agent skill：把一个选题做成有配音、字幕和动画的**科普讲解视频或短纪录片（MP4）**。
 
-核心方法：先研究并给事实分级；再写全片脚本、做分镜，生成一个方案页（脚本、分镜、关键画面、试听、待确认事项）给用户确认；确认后配音先行排出时间轴；然后用代码逐帧渲染画面（Remotion、HyperFrames、Manim、Canvas、p5、Three.js 或 anatomy 等距剖解）；最后用 ffmpeg 合成，并抽帧自检。视频模型只用来补代码画不了的镜头。
+核心方法：先研究并给事实分级；再写全片脚本、做分镜，生成一个方案页（脚本、分镜、关键画面、试听、待确认事项）给用户确认；确认后配音先行排出时间轴；开场先给 3–6 秒真实画面（agent 自己找素材，拿不到就用生图模型还原并标注），再转成线稿、变成我们的模型；讲解部分用代码逐帧渲染画面（Remotion、HyperFrames、Manim、Canvas、p5、Three.js 或 anatomy 等距剖解）；最后用 ffmpeg 合成，并抽帧自检。视频模型只用来补代码画不了的镜头。
 
 ## 覆盖的题型
 
@@ -77,6 +77,7 @@ skills/explainer-video/
     directing.md           主线、画面配方、关系和画法、常见画面错误、受力检查、预检和倒查
     audio.md               配音、时间轴、字幕、背景音乐和卡点
     visual-routes.md       R1–R9 视觉路线的做法、提示词结构和常见坑
+    footage.md             开场的真实画面：怎么拿、怎么处理、拿不到时怎么还原
     anatomy-route.md       剖解路线和 Roadster 的完整方案
     render.md              逐帧渲染约定、各渲染器命令、合成、竖版剪辑
     verify.md              方案页和成片的检查清单、交付说明
@@ -84,7 +85,8 @@ skills/explainer-video/
   templates/               brief.md、choice-card.md、style.json、scene.html、
                            scene-paper.html 和 paper.css（纸面风 2D 场景）、model.js（数值模型）、
                            anatomy-shot.mjs（anatomy 镜头关键帧）、sfx.py（模型驱动的音效）、
-                           research-brief.md（研究子代理的任务说明）、plan.html（方案页模板）
+                           research-brief.md（研究子代理的任务说明）、plan.html（方案页模板）、
+                           scene-reveal.html（开场转场：真实画面 → 线稿 → 模型）
   scripts/
     tts_lines.py           分句配音（自定义命令、edge-tts 或占位音）
     timeline.py            分镜 + 脚本 + 配音 → timeline.json、narration.wav、subs.srt
@@ -100,6 +102,7 @@ skills/explainer-video/
     lint_project.py        结构检查：编号、等级、来源、口径、归属词、镜头字段和母版资产是否对得上
     make_plan.py           生成方案页 plan/index.html，用户确认后再做全片
     check_sync.py          逐句检查成片画面有没有变化，抓“口播在讲、画面不动”
+    footage.sh             开场素材：截取、裁切、补掉片头字、加署名，导出最后一帧和线稿
   examples/mini/           能跑通的最小工程
 ```
 
