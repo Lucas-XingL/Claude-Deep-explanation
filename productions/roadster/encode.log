@@ -1,0 +1,14 @@
+[out#0/mp4 @ 0x55f865fc13c0] Error opening output ../../S01/clip.mp4: No such file or directory
+Error opening output file ../../S01/clip.mp4.
+Error opening output files: No such file or directory
+file:///home/user/Claude-Deep-explanation/productions/roadster/scenes/_shared/car/motion/encode.mjs:21
+    p.on("close", (code) => (code ? fail(new Error(`${cmd} exited with ${code}`)) : ok()));
+                                         ^
+
+Error: ffmpeg exited with 254
+    at ChildProcess.<anonymous> (file:///home/user/Claude-Deep-explanation/productions/roadster/scenes/_shared/car/motion/encode.mjs:21:42)
+    at ChildProcess.emit (node:events:519:28)
+    at maybeClose (node:internal/child_process:1101:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:304:5)
+
+Node.js v22.22.0

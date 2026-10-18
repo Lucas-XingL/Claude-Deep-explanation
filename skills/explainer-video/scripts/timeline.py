@@ -71,8 +71,16 @@ def split_sub(text, max_chars):
         if cur:
             chunks.append(cur)
         while len(p) > max_chars:
-            chunks.append(p[:max_chars])
-            p = p[max_chars:]
+            # Cut at a space if there is one, never inside a Latin word or a number.
+            cut = p.rfind(" ", 1, max_chars + 1)
+            if cut <= 0:
+                cut = max_chars
+                while 0 < cut < len(p) and re.match(r"[A-Za-z0-9.%]", p[cut]) and re.match(r"[A-Za-z0-9.%]", p[cut - 1]):
+                    cut -= 1
+                if cut == 0:
+                    cut = max_chars
+            chunks.append(p[:cut])
+            p = p[cut:].lstrip()
         cur = p
     if cur:
         chunks.append(cur)
