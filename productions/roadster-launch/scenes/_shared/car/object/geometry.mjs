@@ -207,7 +207,7 @@ export function buildObject(T, { layer }) {
 
   // ---- Cold-gas system ----------------------------------------------------------------------------
   // 400 L composite tank where the passenger seat would be (axis along y).
-  const tankP = assembly("tank.passenger", AX.z, 1250, 0.1);
+  const tankP = assembly("tank.passenger", AX.z, 1000, 0.1); // was 1250: rose through the roof and windshield
   {
     const o = [330, 0, 560];
     roundAlong("tank.passenger.body", tankP, AX.y, o, -300, 640, 270, { material: "gunmetal", tone: "hi", details: { seams: [-150, 0, 150, 300, 450], rules: [] } });
@@ -217,7 +217,7 @@ export function buildObject(T, { layer }) {
     anchors.tankP = [330, 200, 830];
   }
   // 200 L tank behind the seat (axis along x).
-  const tankR = assembly("tank.rear", AX.z, 1150, 0.12);
+  const tankR = assembly("tank.rear", AX.z, 900, 0.12); // was 1150: rose through the rear window
   {
     const o = [0, -800, 560];
     roundAlong("tank.rear.body", tankR, AX.x, o, -520, 520, 220, { material: "gunmetal", tone: "hi", details: { seams: [-300, -100, 100, 300] } });
@@ -226,6 +226,14 @@ export function buildObject(T, { layer }) {
     roundAlong("tank.rear.valve", tankR, AX.x, o, 620, 680, 55, { material: "brass", tone: "hi" });
     anchors.tankR = [0, -800, 780];
   }
+  // Feed line (our illustration; the real plumbing is not public): from the 200 L tank's rear face
+  // through a valve back to a manifold just ahead of the fascia, level with the four rear nozzles.
+  const feed = assembly("feed", AX.z, 800, 0.12);
+  roundAlong("feed.line.0", feed, NY, [0, -1022, 540], 0, 50, 26, { material: "steel", tone: "hi" });
+  roundAlong("feed.valve", feed, NY, [0, -1072, 540], 0, 70, 52, { material: "brass", tone: "hi" });
+  roundAlong("feed.line.1", feed, NY, [0, -1142, 540], 0, 730, 26, { material: "steel", tone: "hi" });
+  roundAlong("feed.manifold", feed, AX.x, [0, -1902, 540], -380, 380, 30, { material: "steel", tone: "hi" });
+  anchors.feed = [0, -1520, 560];
   // Rear nozzles behind the licence-plate area (exhaust along −y).
   const nozzR = assembly("nozzles.rear", NY, 1100, 0.02);
   for (const [i, x] of [-330, -110, 110, 330].entries()) {
