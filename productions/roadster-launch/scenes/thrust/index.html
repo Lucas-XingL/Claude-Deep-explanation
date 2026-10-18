@@ -100,8 +100,7 @@ function dashed(x0, y0, x1, y1, color, width, alpha, dash = [14, 10]) {
 function leader(x0, y0, x1, y1, alpha) { dashed(x0, y0, x1, y1, SOFT, 2, alpha * 0.9, [4, 5]); }
 
 function ground(V) {
-  g.save(); g.strokeStyle = INK; g.lineWidth = 2.5;
-  g.beginPath(); g.moveTo(40, YG); g.lineTo(1880, YG); g.stroke();
+  g.save(); g.fillStyle = INK; g.fillRect(40, YG - 1.25, 1840, 2.5);   // a rect: long stroked lines were not bit-stable across seeks
   g.strokeStyle = SOFT; g.lineWidth = 1.4;                        // hatch fixed to the ground (a reference)
   const half = CX / V.S + 1, x0 = Math.floor((V.cx - half) / 0.25) * 0.25;
   g.beginPath();                                                   // one path: per-stroke GPU caching made seeks differ
