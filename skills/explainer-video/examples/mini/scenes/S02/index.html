@@ -1,0 +1,90 @@
+<!doctype html>
+<!-- S02 mechanism: the gear pair from one model. Labels light up with L003, counters run with L004. -->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<style>html, body { margin: 0; background: #F4F1EA; overflow: hidden; } canvas { display: block; }</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script src="../_shared/gear.js"></script>
+<script>
+const SCENE = window.SCENE || { width: 1920, height: 1080, fps: 30, duration: 12 };
+const SHOT = window.SHOT || { duration: 12, lines: [
+  { id: "L002", start: 0.3, end: 3.5 }, { id: "L003", start: 3.8, end: 6.8 }, { id: "L004", start: 7.1, end: 11.0 } ] };
+const DURATION = SHOT.duration || SCENE.duration;
+const STYLE = { paper: "#F4F1EA", ink: "#1D1C1A", inkSoft: "#6B675F", rule: "#D8D2C4", accent: "#E4572E", second: "#2E86AB",
+  font: '"Noto Sans CJK SC","Source Han Sans SC","PingFang SC","Microsoft YaHei","WenQuanYi Zen Hei",sans-serif' };
+const W = SCENE.width, H = SCENE.height, U = Math.min(W, H) / 1080, PORTRAIT = H > W;
+const cv = document.getElementById("c"); cv.width = W; cv.height = H; const g = cv.getContext("2d");
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = (k) => 1 - Math.pow(1 - k, 3);
+const easeInOut = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+const line = (id) => SHOT.lines.find((l) => l.id === id);
+const atLine = (t, id, len = 0.6) => { const l = line(id); return l ? easeOut(seg(t, l.start - 0.1, l.start + len)) : 0; };
+
+// ---- Model: every angle and number on screen comes from here (facts F01–F03) ----
+const Z1 = 12, Z2 = 36;
+const L4 = line("L004") || { start: DURATION * 0.6, end: DURATION * 0.95 };
+const OMEGA = (3 * 2 * Math.PI) / (L4.end - L4.start);   // small gear: exactly 3 turns while L004 is spoken
+const theta1 = (t) => OMEGA * t;
+const revsDuringL4 = (t) => GEAR.revs(OMEGA * clamp(t - L4.start, 0, L4.end - L4.start));
+
+function label(str, x, y, k, color) {
+  g.save(); g.globalAlpha = 0.35 + 0.65 * k; g.fillStyle = k > 0.01 ? color : STYLE.inkSoft;
+  g.font = `700 ${(40 + 12 * k) * U}px ${STYLE.font}`; g.textAlign = "center"; g.fillText(str, x, y); g.restore();
+}
+
+function draw(t) {
+  g.fillStyle = STYLE.paper; g.fillRect(0, 0, W, H);
+  const m = 14 * U, r1 = GEAR.pitch(m, Z1), r2 = GEAR.pitch(m, Z2);
+  const span = 2 * r1 + 2 * r2;
+  const c1x = W / 2 - span / 2 + r1, c2x = c1x + r1 + r2, cy = PORTRAIT ? H * 0.45 : H * 0.47;
+  const contactX = c1x + r1;
+
+  // Slow push-in on the mesh point while L004 is spoken.
+  const z = lerp(1, 1.12, easeInOut(seg(t, L4.start, L4.end)));
+  g.save(); g.translate(contactX, cy); g.scale(z, z); g.translate(-contactX, -cy);
+
+  const th1 = theta1(t);
+  GEAR.draw(g, c2x, cy, m, Z2, GEAR.follow(th1, Z1, Z2), { fill: "#E6E0D3", stroke: STYLE.ink, lw: 2.5 * U });
+  GEAR.draw(g, c1x, cy, m, Z1, th1, { fill: "#FBF9F4", stroke: STYLE.ink, lw: 2.5 * U });
+
+  // L002: the contact point pulses — "the same number of teeth pass here".
+  const k2 = atLine(t, "L002");
+  if (k2 > 0) {
+    const pulse = 0.5 + 0.5 * Math.sin(t * 6);
+    g.beginPath(); g.arc(contactX, cy, (10 + 6 * pulse) * U, 0, Math.PI * 2);
+    g.fillStyle = STYLE.accent; g.globalAlpha = k2; g.fill(); g.globalAlpha = 1;
+  }
+  // L003: tooth counts light up.
+  // The small gear's count lights with the start of L003, the big gear's about 0.9 s later.
+  const l3 = line("L003");
+  const k3a = l3 ? easeOut(seg(t, l3.start - 0.1, l3.start + 0.5)) : 0;
+  const k3b = l3 ? easeOut(seg(t, l3.start + 0.9, l3.start + 1.5)) : 0;
+  label(`${Z1} 齿`, c1x, cy + r1 + 90 * U, k3a, STYLE.accent);
+  label(`${Z2} 齿`, c2x, cy + r2 + 70 * U, k3b, STYLE.accent);
+  g.restore();
+
+  // L004: turn counters, read from the model.
+  const k4 = atLine(t, "L004");
+  if (k4 > 0) {
+    const n1 = revsDuringL4(t), n2 = n1 * Z1 / Z2;
+    const px = PORTRAIT ? W / 2 : W - 330 * U, py = PORTRAIT ? H * 0.78 : H * 0.18;
+    g.save(); g.globalAlpha = k4; g.textAlign = PORTRAIT ? "center" : "left"; g.fillStyle = STYLE.ink;
+    g.font = `600 ${30 * U}px ${STYLE.font}`; g.fillText("小齿轮", px, py);
+    g.font = `800 ${72 * U}px ${STYLE.font}`; g.fillStyle = STYLE.accent; g.fillText(`${n1.toFixed(1)} 圈`, px, py + 80 * U);
+    g.font = `600 ${30 * U}px ${STYLE.font}`; g.fillStyle = STYLE.ink; g.fillText("大齿轮", px, py + 150 * U);
+    g.font = `800 ${72 * U}px ${STYLE.font}`; g.fillStyle = STYLE.second; g.fillText(`${n2.toFixed(1)} 圈`, px, py + 230 * U);
+    g.restore();
+  }
+}
+
+window.renderFrame = (t) => draw(t);
+window.sceneReady = document.fonts.ready;
+if (!window.__seek) { const t0 = performance.now(); const loop = () => { draw(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); }; requestAnimationFrame(loop); } else draw(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<!-- S01 hook: the question types on in step with L001; two gear silhouettes on the right. -->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<style>html, body { margin: 0; background: #F4F1EA; overflow: hidden; } canvas { display: block; }</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script src="../_shared/gear.js"></script>
+<script>
+const SCENE = window.SCENE || { width: 1920, height: 1080, fps: 30, duration: 4 };
+const SHOT = window.SHOT || { duration: 4, lines: [{ id: "L001", start: 0.4, end: 3.6, text: "" }] };
+const DURATION = SHOT.duration || SCENE.duration;
+const STYLE = { paper: "#F4F1EA", ink: "#1D1C1A", inkSoft: "#6B675F", rule: "#D8D2C4", accent: "#E4572E",
+  font: '"Noto Sans CJK SC","Source Han Sans SC","PingFang SC","Microsoft YaHei","WenQuanYi Zen Hei",sans-serif' };
+const W = SCENE.width, H = SCENE.height, U = Math.min(W, H) / 1080, PORTRAIT = H > W;
+const cv = document.getElementById("c"); cv.width = W; cv.height = H; const g = cv.getContext("2d");
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = (k) => 1 - Math.pow(1 - k, 3);
+const line = (id) => SHOT.lines.find((l) => l.id === id);
+
+const QUESTION = ["一个小齿轮，", "怎么让大齿轮", "转得更慢，却更有劲？"];
+
+function draw(t) {
+  g.fillStyle = STYLE.paper; g.fillRect(0, 0, W, H);
+  const l = line("L001");
+  // Characters revealed in proportion to how far the line has been spoken.
+  const k = l ? seg(t, l.start - 0.1, l.end - 0.3) : 1;
+  const all = QUESTION.join("");
+  let shown = Math.floor(all.length * k);
+  g.font = `800 ${84 * U}px ${STYLE.font}`; g.fillStyle = STYLE.ink; g.textBaseline = "alphabetic";
+  const x0 = PORTRAIT ? 90 * U : 150 * U, y0 = PORTRAIT ? H * 0.22 : H * 0.36;
+  QUESTION.forEach((row, i) => {
+    const n = clamp(shown, 0, row.length); shown -= row.length;
+    g.fillText(row.slice(0, n), x0, y0 + i * 118 * U);
+  });
+  // Accent rule grows under the question.
+  g.fillStyle = STYLE.accent;
+  g.fillRect(x0, y0 + 3 * 118 * U - 40 * U, 220 * U * easeOut(seg(t, 0.2, 1.2)), 8 * U);
+
+  // Gear silhouettes drift in and turn slowly (same model as S02).
+  const a = easeOut(seg(t, 0.0, 1.0));
+  const cx = PORTRAIT ? W * 0.5 : W * 0.72, cy = PORTRAIT ? H * 0.72 : H * 0.52;
+  const m = 9 * U, th = 0.6 * t;
+  g.globalAlpha = a;
+  GEAR.draw(g, cx - GEAR.pitch(m, 36) - 30 * U * (1 - a), cy, m, 12, th, { fill: STYLE.rule, stroke: STYLE.inkSoft, lw: 2 * U });
+  GEAR.draw(g, cx + GEAR.pitch(m, 12), cy, m, 36, GEAR.follow(th, 12, 36), { fill: STYLE.rule, stroke: STYLE.inkSoft, lw: 2 * U });
+  g.globalAlpha = 1;
+}
+
+window.renderFrame = (t) => draw(t);
+window.sceneReady = document.fonts.ready;
+if (!window.__seek) { const t0 = performance.now(); const loop = () => { draw(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); }; requestAnimationFrame(loop); } else draw(0);
+</script>
+</body>
+</html>

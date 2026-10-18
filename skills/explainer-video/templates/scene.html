@@ -1,0 +1,105 @@
+<!doctype html>
+<!--
+  Scene template (Canvas 2D). Copy to scenes/<id>/index.html and change draw().
+  Contract (references/render.md):
+    window.SCENE  {width, height, fps, duration}   set by capture_frames.mjs
+    window.SHOT   {id, duration, lines:[{id,start,end,text}]}  line times relative to this shot
+    window.renderFrame(t)  draws time t (seconds); never reads the clock
+  Opened directly in a browser it plays in a loop, for authoring.
+-->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; background: #F4F1EA; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// ---- Setup ---------------------------------------------------------------
+const SCENE = window.SCENE || { width: 1920, height: 1080, fps: 30, duration: 6 };
+const SHOT = window.SHOT || { id: "preview", duration: SCENE.duration, lines: [
+  { id: "L001", start: 0.4, end: 2.6, text: "示例句子一" },
+  { id: "L002", start: 2.9, end: 5.4, text: "示例句子二" } ] };
+const DURATION = SHOT.duration || SCENE.duration;
+
+// Copy the values you need from style.json (file:// pages cannot fetch it).
+const STYLE = {
+  paper: "#F4F1EA", ink: "#1D1C1A", inkSoft: "#6B675F", rule: "#D8D2C4",
+  accent: "#E4572E", second: "#2E86AB",
+  font: '"Noto Sans CJK SC","Source Han Sans SC","PingFang SC","Microsoft YaHei","WenQuanYi Zen Hei",sans-serif',
+  serif: '"Noto Serif CJK SC","Source Han Serif SC","Songti SC",serif',
+};
+
+const W = SCENE.width, H = SCENE.height;
+const U = Math.min(W, H) / 1080;          // 1 unit = 1px at 1080p; layouts work in 16:9 and 9:16
+const PORTRAIT = H > W;
+const cv = document.getElementById("c");
+cv.width = W; cv.height = H;
+const g = cv.getContext("2d");
+
+// ---- Helpers ---------------------------------------------------------------
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const seg = (t, a, b) => clamp((t - a) / (b - a));                 // 0→1 between a and b
+const ease = {
+  out: (k) => 1 - Math.pow(1 - k, 3),
+  inOut: (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2),
+  back: (k) => 1 + 2.2 * Math.pow(k - 1, 3) + 1.2 * Math.pow(k - 1, 2),
+};
+// Line sync: when is line `id` spoken inside this shot? (null if not in this shot)
+const line = (id) => SHOT.lines.find((l) => l.id === id) || null;
+// 0 before the line starts (minus lead), 1 when it ends: drive a highlight with the voice.
+const onLine = (t, id, lead = 0.15) => { const l = line(id); return l ? seg(t, l.start - lead, l.end) : 0; };
+// A short pulse starting when the line starts: for "appear exactly when it is said".
+const atLine = (t, id, len = 0.6, lead = 0.1) => { const l = line(id); return l ? ease.out(seg(t, l.start - lead, l.start - lead + len)) : 0; };
+
+function text(str, x, y, { size = 48, color = STYLE.ink, weight = 600, align = "left", font = STYLE.font, alpha = 1 } = {}) {
+  g.save(); g.globalAlpha = alpha; g.fillStyle = color; g.textAlign = align; g.textBaseline = "alphabetic";
+  g.font = `${weight} ${size * U}px ${font}`; g.fillText(str, x, y); g.restore();
+}
+// Evidence badge (references/research.md): "宣称" "估算" "复原想象" "模拟" "AI 生成画面" …
+function badge(label, x, y, { color = STYLE.accent, alpha = 1 } = {}) {
+  g.save(); g.globalAlpha = alpha; g.font = `600 ${22 * U}px ${STYLE.font}`;
+  const w = g.measureText(label).width + 24 * U, h = 38 * U;
+  g.strokeStyle = color; g.lineWidth = 2 * U; g.beginPath(); g.roundRect(x, y, w, h, 6 * U); g.stroke();
+  g.fillStyle = color; g.textBaseline = "middle"; g.fillText(label, x + 12 * U, y + h / 2 + 1 * U); g.restore();
+}
+
+// ---- The scene -------------------------------------------------------------
+// Replace this with your shot. Keep every motion a function of t.
+function draw(t) {
+  g.fillStyle = STYLE.paper; g.fillRect(0, 0, W, H);
+
+  // Title slides in with the first line.
+  const k1 = atLine(t, "L001", 0.8);
+  text("一个问题", PORTRAIT ? W / 2 : 140 * U, lerp(H * 0.42 + 30 * U, H * 0.42, k1),
+       { size: 96, weight: 800, alpha: k1, align: PORTRAIT ? "center" : "left" });
+
+  // A bar fills while the second line is spoken.
+  const k2 = onLine(t, "L002");
+  const bx = PORTRAIT ? 120 * U : 140 * U, by = H * 0.52, bw = W - 2 * bx, bh = 14 * U;
+  g.fillStyle = STYLE.rule; g.fillRect(bx, by, bw, bh);
+  g.fillStyle = STYLE.accent; g.fillRect(bx, by, bw * ease.inOut(k2), bh);
+
+  badge("估算", bx, by + 40 * U, { alpha: atLine(t, "L002") });
+  text(`t = ${t.toFixed(2)}s`, W - 40 * U, H - 40 * U, { size: 20, color: STYLE.inkSoft, align: "right", weight: 400 });
+}
+
+// ---- Contract ----------------------------------------------------------------
+window.renderFrame = (t) => draw(t);
+window.sceneReady = document.fonts.ready;
+
+// Preview in a normal browser: loop with real time. Skipped during capture.
+if (!window.__seek) {
+  const t0 = performance.now();
+  const loop = () => { draw(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+} else {
+  draw(0);
+}
+</script>
+</body>
+</html>

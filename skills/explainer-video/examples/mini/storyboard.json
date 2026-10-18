@@ -1,0 +1,30 @@
+{
+  "meta": { "title": "齿轮为什么能变慢变有劲", "width": 1920, "height": 1080, "fps": 30, "style": "style.json" },
+  "assets": {
+    "gears": "一对啮合齿轮，z1 = 12、z2 = 36，所有角度都从同一个模型 θ1(t) 算出"
+  },
+  "shots": [
+    {
+      "id": "S01", "section": "钩子", "lines": ["L001"], "pre": 0.4, "post": 0.4,
+      "route": "R2", "source": "scenes/S01/index.html",
+      "visual": "纸面背景，问题逐字出现，右侧一大一小两个齿轮的剪影",
+      "camera": "固定机位",
+      "onscreen": ["问题文字"]
+    },
+    {
+      "id": "S02", "section": "原理", "lines": ["L002", "L003", "L004"], "pre": 0.3, "post": 0.8,
+      "route": "R1", "asset": "gears", "source": "scenes/S02/index.html",
+      "visual": "两个齿轮咬合转动；说到齿数时齿数标签亮起，说到圈数时计数器亮起",
+      "camera": "固定机位，L004 期间缓慢推近啮合点",
+      "onscreen": ["12 齿", "36 齿", "圈数计数器"],
+      "evidence": ["F01", "F02", "F03"]
+    },
+    {
+      "id": "S03", "section": "收束", "lines": [], "duration": 2.5,
+      "route": "R2", "source": "scenes/S03/index.html",
+      "visual": "结论卡：转速 ÷3，扭矩 ×3，带“理想情况”角标",
+      "onscreen": ["转速 ÷3 · 扭矩 ×3", "理想情况，忽略摩擦"],
+      "evidence": ["F03"]
+    }
+  ]
+}

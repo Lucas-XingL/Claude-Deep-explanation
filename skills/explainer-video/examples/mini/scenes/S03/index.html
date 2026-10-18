@@ -1,0 +1,29 @@
+<!doctype html>
+<!-- S03 end card in plain HTML/CSS. CSS animations are seeked frame by frame by capture_frames.mjs. -->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<style>
+  :root { --paper: #F4F1EA; --ink: #1D1C1A; --soft: #6B675F; --accent: #E4572E; --second: #2E86AB; }
+  html, body { margin: 0; background: var(--paper); overflow: hidden;
+    font-family: "Noto Sans CJK SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", "WenQuanYi Zen Hei", sans-serif; }
+  .stage { width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3vh; }
+  .big { font-size: 9vmin; font-weight: 800; color: var(--ink); letter-spacing: 0.02em; }
+  .big b { color: var(--accent); } .big i { color: var(--second); font-style: normal; }
+  .badge { font-size: 2.2vmin; font-weight: 600; color: var(--second); border: 0.2vmin solid var(--second);
+    border-radius: 0.6vmin; padding: 0.6vmin 1.2vmin; }
+  .in { opacity: 0; animation: rise 0.7s cubic-bezier(.2,.7,.2,1) forwards; }
+  .in.d2 { animation-delay: 0.5s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(2vh); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="big in">转速 <b>÷3</b> · 扭矩 <i>×3</i></div>
+  <div class="badge in d2">理想情况，忽略摩擦</div>
+</div>
+<script>
+  window.sceneReady = document.fonts.ready;
+</script>
+</body>
+</html>
