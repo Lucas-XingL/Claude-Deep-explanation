@@ -206,9 +206,18 @@ function draw(t) {
   const ex = Math.min(AX.x0 + HOVER_T * AX.pxs + 50, 1790) - lw - 84;
   text(`理想悬停 ≈ ${Math.round(HOVER_T)} 秒`, ex, AX.y - 52, 30, { color: ACCENT, weight: 700, alpha: kEnd });
   badge("估算", ex + lw + 12, AX.y - 52, BLUE, kEnd);
-  // L020: the engineer's own figure
+  // L020: the engineer's own figure. While the line is said, a second bar (ink) grows under the
+  // axis from 0 to burnClaim, reaching it on 五秒, under the ideal bar for comparison.
   const k5 = atWord(t, "L020", "五");
   const x5 = AX.x0 + M.burnClaim * AX.pxs;
+  const wE = wordAt("L020", "工程师"), w5t = wordAt("L020", "五");
+  if (wE != null && w5t != null && t > wE - 0.1) {
+    const grow = eio(seg(t, wE, w5t + 0.2)), y2 = AX.y + 26;
+    g.save(); g.globalAlpha = clamp((t - wE + 0.1) / 0.3); g.strokeStyle = INK; g.lineWidth = 10; g.lineCap = "round";
+    g.beginPath(); g.moveTo(AX.x0, y2); g.lineTo(AX.x0 + grow * M.burnClaim * AX.pxs, y2); g.stroke();
+    g.fillStyle = INK; g.beginPath(); g.arc(AX.x0 + grow * M.burnClaim * AX.pxs, y2, 11, 0, Math.PI * 2); g.fill(); g.restore();
+  }
+  text("每次充气", AX.x0 - 12, AX.y + 26, 24, { align: "right", color: SOFT, weight: 500, alpha: wE == null ? 0 : clamp((t - wE) / 0.4) });
   if (k5 > 0) {
     g.save(); g.globalAlpha = k5; g.strokeStyle = INK; g.lineWidth = 3; g.setLineDash([7, 6]);
     g.beginPath(); g.moveTo(x5, AX.y - 18); g.lineTo(x5, AX.y + 14); g.stroke(); g.restore();
