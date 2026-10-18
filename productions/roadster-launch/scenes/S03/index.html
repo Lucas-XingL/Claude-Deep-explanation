@@ -30,7 +30,7 @@
     /* style.json palette (paper) */
     --bg-0: #F4F1EA; --bg-1: #FBF9F4; --ink: #1D1C1A; --soft: #6B675F; --rule: rgba(29, 28, 26, .12);
     --card: rgba(255, 255, 255, .72); --card-edge: rgba(29, 28, 26, .14); --shadow: 0 24px 50px rgba(60, 50, 38, .12);
-    --fact: #23708F; --claim: #B53F28; --num-a: #1D1C1A; --num-b: #4C4A45;
+    --fact: #1D6280; --claim: #A63923; --num-a: #1D1C1A; --num-b: #4C4A45;
     --glow: rgba(46, 134, 171, .10); --glow-2: rgba(228, 87, 46, .06);
     --sans: "Noto Sans SC Variable", sans-serif;
     --serif: "Noto Serif SC Variable", serif;
@@ -80,6 +80,17 @@
   .note i { font-style: normal; font-size: 22px; color: var(--fact); }
   .note.r i { color: var(--claim); }
   .corner { position: absolute; right: 120px; top: 92px; font-family: var(--mono); font-size: 20px; color: var(--soft); letter-spacing: .1em; }
+  /* Paper theme = the paper plates of the other shots (scenes/_shared/paper.css): warm paper with grain,
+     a vignette, a thin frame inset 52/48 px, "Fig N" top left and the plate's title top right. */
+  [data-theme="paper"] .bg { background: radial-gradient(62% 62% at 50% 45%,rgba(255,253,247,.85),rgba(255,253,247,0) 75%),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .42 0 0 0 0 .36 0 0 0 0 .28 0 0 0 .1 0'/%3E%3C/filter%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.004 .09' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .44 0 0 0 0 .36 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='540' height='960'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.006' numOctaves='3' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .48 0 0 0 0 .38 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E"),#f1ece2;background-size:auto,640px 640px,1920px 1080px,auto; }
+  [data-theme="paper"] #grid, [data-theme="paper"] #glow { visibility: hidden; }
+  .vignette { position: absolute; inset: 0; background: radial-gradient(125% 95% at 50% 50%, transparent 58%, rgba(110, 90, 60, .14) 100%); }
+  .plate { position: absolute; inset: 52px 48px; border: 2px solid rgba(60, 50, 38, .2); }
+  .plate .fig { position: absolute; top: 28px; left: 28px; font-family: var(--mono); font-size: 22px; letter-spacing: .04em; color: rgba(34, 30, 26, .85); }
+  [data-theme="dark"] .vignette, [data-theme="dark"] .plate { display: none; }
+  [data-theme="paper"] .corner { right: 76px; top: 80px; font-size: 22px; color: rgba(60, 52, 42, .82); }
+  [data-theme="paper"] .kicker { top: 136px; }
+  [data-theme="paper"] .title { top: 162px; }
 </style>
 </head>
 <body>
@@ -88,6 +99,8 @@
     <div class="bg"></div>
     <div class="grid" id="grid"></div>
     <div class="glow" id="glow"></div>
+    <div class="vignette"></div>
+    <div class="plate"><span class="fig">Fig 2</span></div>
     <div class="stage" id="stage">
       <div class="kicker" id="kicker"></div>
       <h1 class="title" id="title"></h1>
@@ -114,15 +127,15 @@
 
   // What the shot shows. `at` is [line id, phrase]: the element arrives when the phrase is spoken.
   const CONTENT = {
-    kicker: "ROADSTER · 2026-10-15 发布会", title: "演示过的，和只是说过的", corner: "FIG 2 · 演示与宣称",
+    kicker: "ROADSTER · 2026-10-15 发布会", title: "演示过的，和只是说过的", corner: "发布会 · 演示与宣称",
     facts: { head: "演示过", at: ["L003", "三件事"], items: [
-      { ic: "01", title: "坡道倒挂", sub: "沿弯道开到车头朝下", at: ["L003", "坡道倒挂"] },
+      { ic: "01", title: "坡道倒挂", sub: "沿弯道开上去，整车倒扣", at: ["L003", "坡道倒挂"] },
       { ic: "02", title: "空中翻身", sub: "离开坡道后转半圈落地", at: ["L003", "空中翻身"] },
       { ic: "03", title: "飞过一排车", sub: "跳过五辆特斯拉", at: ["L003", "飞过去"] } ] },
     number: { value: 0.81, digits: 2, unit: " s", sub: "0–60 英里/小时", badge: "特斯拉自己计时", at: ["L004", "零点八"], badgeAt: ["L004", "特斯拉"] },
     claims: { head: "只是宣称", items: [
       { ic: "kN", title: "推力 > 80 kN", sub: "总推力，方向未公开", tag: "宣称", at: ["L005", "推力"] },
-      { ic: "s", title: "能飞多久", sub: "没有公开数据", tag: "宣称", at: ["L005", "能飞多久"] } ] },
+      { ic: "s", title: "能飞多久", sub: "工程师说只够喷几秒", tag: "宣称", at: ["L005", "能飞多久"] } ] },
     note: { text: "车上没有人 · 原型车", at: ["L005", "没有人"] },
     note2: { text: "都来自工程师的口头说法", at: ["L005", "工程师"] },
   };

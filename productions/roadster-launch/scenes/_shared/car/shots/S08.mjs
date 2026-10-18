@@ -3,7 +3,7 @@
 // the two lines the body panels lift away (shell channel; chassis, tanks, feed line and nozzles stay
 // mounted), then the camera pushes in on the gas system. On "气瓶" both tanks and the feed line light up,
 // so tank → feed line → nozzles reads as one lit path. Readouts: rated pressure (claimed) and ≈ 300 × tyre
-// pressure (our estimate, model.js), each on its word.
+// pressure (our estimate, model.js, with its assumption: tyre at 2.3 bar), each on its word.
 // When `phrase` is spoken in line `id` (from templates/anatomy-shot.mjs).
 function wordTime(shot, id, phrase) {
   const SKIP = /[\s，。！？；：、,.!?;:“”"'（）()《》—…·-]/g, l = shot.lines.find((x) => x.id === id);
@@ -36,9 +36,9 @@ export function make(shot) {
       { t: n0 + 0.1, hiNozzle: 1, ease: "lin" },
       { t: x0, yaw: -137, pitch: 28, zoom: 2.45, focus: "body", shell: 0, ease: "lin" },
       { t: x1, yaw: -131, pitch: 33, zoom: 2.6, focus: [100, -700, 560], shell: open, ease: "io" },
-      { t: k0, yaw: -124, pitch: 36, zoom: 3.2, focus: [130, -1100, 560], panX: -20, panY: -10, hiTank: 0, ease: "io" },
+      { t: k0, yaw: -124, pitch: 36, zoom: 3.1, focus: [130, -1100, 560], panX: -133, panY: -10, hiTank: 0, ease: "io" },
       { t: k0 + 0.1, hiTank: 1, ease: "lin" },
-      { t: D, yaw: -120, pitch: 37, zoom: 3.45, focus: [120, -1050, 560], panX: -30, ease: "lin" },
+      { t: D, yaw: -120, pitch: 37, zoom: 3.3, focus: [120, -1050, 560], panX: -152, ease: "lin" },
     ],
     // Every label entry is complete: the page shows the latest entry as it is, and each render job
     // starts mid-shot.
@@ -47,7 +47,7 @@ export function make(shot) {
       [n0, "推进器喷口", ""],
       [k0, "推进器喷口\n管路走向为示意", "碳纤维高压气瓶"],
       [p0, "推进器喷口\n管路走向为示意", "碳纤维高压气瓶\n额定约 690 bar · 宣称"],
-      [r0, "推进器喷口\n管路走向为示意", "碳纤维高压气瓶\n额定约 690 bar · 宣称\n≈ 胎压 300 倍 · 估算"],
+      [r0, "推进器喷口\n管路走向为示意", "碳纤维高压气瓶\n额定约 690 bar · 宣称\n≈ 胎压 300 倍 · 估算\n胎压按 2.3 bar"],
     ].map(([t, hint, readout]) => ({ t, fig: "Fig 5", title: "Anatomy · 电动跑车 · 冷气推进", hint, readout })),
   };
 }

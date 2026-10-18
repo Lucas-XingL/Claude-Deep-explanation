@@ -40,9 +40,10 @@ const REVEAL = {
   photo: "../_shared/opening/last.png",
   edges: "../_shared/opening/edges.png",
   sprite: "../_shared/car_side.png",         // the anatomy car's side sprite (front on the left)
-  // The car in the photo is upside down under the ramp, tilted ~9.7° down to the right: a vertical
-  // flip (rot 180 + mirror) plus the tilt. Width from the wheelbase (986 px between wheel centres).
-  align: { x: 1152, y: 518, w: 1555, rot: 189.7, flip: true },
+  // The car in the photo is upside down under the ramp: a vertical flip (rot 180 + mirror) plus the
+  // ramp's tilt (8.47°, so the car is parallel to it). Width from the wheelbase (986 px between wheel
+  // centres); y puts the tyres' contact line (sprite y = 305) on the ramp line drawn below.
+  align: { x: 1152, y: 499, w: 1555, rot: 188.47, flip: true },
   credit: "画面：特斯拉官方直播，2026-10-15，经看看新闻转载",
   badge: "",                                  // A-level official footage carries no badge (style.json)
   push: 0.04,
@@ -148,8 +149,9 @@ function draw(t) {
   // On the paper: the ramp, the two things the line names, then the question.
   ramp(gl, t, modelIn);
   const fade = (t0) => eio(seg(t, t0, t0 + 0.4)) * modelIn;
-  inkLabel(gm, "车头朝下", 150, 610, 34, fade(Math.max(wordAt("L002", "车头朝下"), T.settle * d - 0.6)), [300, 590, 400, 470]);
-  inkLabel(gm, "轮子贴着顶", 1180, 120, 34, fade(Math.max(wordAt("L002", "轮子贴着顶"), T.settle * d - 0.4)), [1370, 140, 1600, 360]);
+  // Leader targets: the roof (sprite 580,5) and the rear tyre's contact point, through the same align.
+  inkLabel(gm, "车顶朝下", 1310, 800, 34, fade(Math.max(wordAt("L002", "车顶朝下"), T.settle * d - 0.6)), [1300, 780, 1125, 705]);
+  inkLabel(gm, "轮子贴着顶", 1180, 120, 34, fade(Math.max(wordAt("L002", "轮子贴着顶"), T.settle * d - 0.4)), [1370, 140, 1640, 368]);
   const q = eio(seg(t, wordAt("L002", "它为什么") - 0.1, wordAt("L002", "它为什么") + 0.5));
   if (q > 0) {
     gm.save(); gm.setTransform(1, 0, 0, 1, 0, 0); gm.globalAlpha = q; gm.fillStyle = `rgb(${INK})`;

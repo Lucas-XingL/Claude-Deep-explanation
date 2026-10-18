@@ -12,7 +12,7 @@ window.UNDERBODY = (SCENE, SHOT) => {
   const PAL = { paper: "#F4F1EA", ink: "#1D1C1A", inkSoft: "#6B675F", rule: "#D8D2C4", accent: "#E4572E", second: "#2E86AB" };
   const FONT = '"Noto Sans CJK SC","Source Han Sans SC","PingFang SC","Microsoft YaHei","WenQuanYi Zen Hei",sans-serif';
   const MONO = '"JetBrains Mono","SFMono-Regular",Menlo,"DejaVu Sans Mono","WenQuanYi Zen Hei Mono",monospace';
-  const SZ = { body: 44, label: 30, small: 22 };
+  const SZ = { body: 44, label: 30, small: 22, note: 24 };
   const DUR = SHOT.duration || SCENE.duration, FPS = SCENE.fps || 30;
   const T_END = Math.max(1 / FPS, (Math.round(DUR * FPS) - 1) / FPS); // time of the last frame
   const ID = ["S05", "S06", "S07"].includes(SHOT.id) ? SHOT.id : "S05";
@@ -82,9 +82,7 @@ window.UNDERBODY = (SCENE, SHOT) => {
   }
   if (ID === "S06") {
     SC.f0 = ls("L008") - 0.05; SC.f1 = w("L008", "车重") - 0.25;
-    SC.a = w("L008", "车重") + 0.25; SC.b = w("L008", "特斯拉") + 0.6;
-    SC.dp = (t) => DP_W + (DP_CLAIM - DP_W) * eio(seg(t, SC.a, SC.b));
-    SC.moveFrom = SC.f1 + 0.1;
+    SC.dp = () => DP_W;                                                           // just holds the car (= weight)
   }
   if (ID === "S07") {
     SC.leave = w("L011", "离开");
@@ -92,7 +90,9 @@ window.UNDERBODY = (SCENE, SHOT) => {
     SC.gapM = (t) => 2 * M.sealGap * eio(seg(t, SC.leave, SC.gap1));            // m (示意)
     SC.seal = solve((t) => (M.suctionHolds(SC.gapM(t)) ? 0 : 1), 0.5, SC.leave, SC.gap1);
     SC.gone = w("L011", "没") + 0.05;
-    SC.dp = (t) => DP_CLAIM * (1 - eio(seg(t, SC.seal, SC.gone)));
+    SC.a = w("L010", "两千五百") - 0.1; SC.b = SC.a + 1.0; SC.moveFrom = SC.a - 0.2;
+    SC.grow = (t) => DP_W + (DP_CLAIM - DP_W) * eio(seg(t, SC.a, SC.b));        // engineer's 2,500 kgf (宣称)
+    SC.dp = (t) => SC.grow(t) * (1 - eio(seg(t, SC.seal, SC.gone)));
     const GAP_VIS = 11 / M.sealGap, FALL_VIS = 4.4;                              // sprite px (示意, 慢放)
     SC.fall = (t) => {
       if (t <= SC.seal) return 0;
@@ -112,7 +112,7 @@ window.UNDERBODY = (SCENE, SHOT) => {
   }
 
   // ---- dots: cavity air (stratified thresholds) and the air around the car ----
-  const CAV = GE.CAV, ROAD = GE.ROAD;
+  const CAV = GE.CAV, ROAD = GE.ROAD, PCX = (GE.CAV.x0 + GE.CAV.x1) / 2;   // centre of the sealed area
   const jitterOf = (i, k0) => ({
     kx: Math.max(1, Math.round((0.35 + 0.5 * hash(i, k0)) * T_END)), ky: Math.max(1, Math.round((0.3 + 0.5 * hash(i, k0 + 1)) * T_END)),
     px: 2 * Math.PI * hash(i, k0 + 2), py: 2 * Math.PI * hash(i, k0 + 3),
@@ -127,7 +127,7 @@ window.UNDERBODY = (SCENE, SHOT) => {
   CD.map((d) => d.i).sort((a, b) => hash(a, 9) - hash(b, 9)).forEach((i, rank) => (CD[i].u = (rank + 0.5) / NC));
   for (const d of CD) {
     if (ID === "S05" && d.u > RHO5) d.tau = solve((t) => rhoOf(SC.dp(t)), d.u, SC.a, SC.b);
-    if (ID === "S06" && d.u <= RHO5 && d.u > RHO6) d.tau = solve((t) => rhoOf(SC.dp(t)), d.u, SC.a, SC.b);
+    if (ID === "S07" && d.u <= RHO5 && d.u > RHO6) d.tau = solve((t) => rhoOf(SC.dp(t)), d.u, SC.a, SC.b);
     if (ID === "S07" && d.u > RHO6) d.arr = solve((t) => rhoOf(SC.dp(t)), d.u, SC.seal, SC.gone);
     d.gone = ID === "S06" && d.u > RHO5;
   }
@@ -152,6 +152,16 @@ window.UNDERBODY = (SCENE, SHOT) => {
     const [jx, jy] = jit(d, t, 2.2);
     const still = { x: d.hx + jx, y: d.hy + jy, att: true, a: 1 };
     if (d.gone) return null;
+    if (d.arr != null) {
+      const t0 = Math.max(SC.seal, d.arr - 0.55);
+      if (t >= d.arr) return still;
+      if (t >= t0) {
+        const s = seg(t, t0, d.arr), h = hash(d.i, 11), front = h < 0.3;
+        const ex = front ? CAV.x0 - 45 - 70 * hash(d.i, 12) : d.hx + 30 * (hash(d.i, 13) - 0.5), ey = ROAD.y - (front ? 4 + 8 * hash(d.i, 14) : 2);
+        return { x: lerp(ex, d.hx + jx, eo(s)), y: lerp(ey, d.hy + jy + st.dy, eo(s)), att: false, a: seg(s, 0, 0.3) };
+      }
+      if (d.tau == null) return null;                                              // left in S05, not back yet
+    }
     if (d.tau != null) {
       const TA = clamp(Math.hypot(GE.EXIT.x - d.hx, GE.EXIT.y - d.hy) / 520, 0.3, 1.0), t0 = Math.max(SC.moveFrom, d.tau - TA);
       if (t <= t0) return still;
@@ -161,14 +171,6 @@ window.UNDERBODY = (SCENE, SHOT) => {
       if (t < t2) { const s = seg(t, t1, t2); return { x: lerp(GE.INLET.x, GE.OUTLET.x, s), y: lerp(GE.INLET.y, GE.OUTLET.y, s), att: true, a: 1 }; }
       if (t < t3) { const s = seg(t, t2, t3), h = hash(d.i, 7); return { x: GE.OUTLET.x + (110 + 40 * h) * s, y: GE.OUTLET.y + (24 * (hash(d.i, 8) - 0.5) - 10) * s, att: true, a: 1 - s }; }
       return null;
-    }
-    if (d.arr != null) {
-      const t0 = Math.max(SC.seal, d.arr - 0.55);
-      if (t < t0) return null;
-      if (t >= d.arr) return still;
-      const s = seg(t, t0, d.arr), h = hash(d.i, 11), front = h < 0.3;
-      const ex = front ? CAV.x0 - 45 - 70 * hash(d.i, 12) : d.hx + 30 * (hash(d.i, 13) - 0.5), ey = ROAD.y - (front ? 4 + 8 * hash(d.i, 14) : 2);
-      return { x: lerp(ex, d.hx + jx, eo(s)), y: lerp(ey, d.hy + jy + st.dy, eo(s)), att: false, a: seg(s, 0, 0.3) };
     }
     return still;
   }
@@ -236,7 +238,7 @@ window.UNDERBODY = (SCENE, SHOT) => {
   // ---- cues: what is shown, from the words ----
   function cues(t) {
     const q = { road: 0, ceil: 0, skirt: 0, fanL: 0, air: 0, fanHi: 0, roofHi: 1, ghost: 1, pres: 1, excess: 0, merge: 1, pulse: 0,
-      weight: 0, wnum: 0, support: 0, cavHi: 0, under: 1, atm: 1, note: 1, bAll: 0, bHead: 0, bVal: 0, bPct: 0,
+      weight: 0, wnum: 0, wgoal: 0, just: 0, claim: 0, support: 0, cavHi: 0, under: 1, atm: 1, note: 1, bAll: 0, bHead: 0, bVal: 0, bPct: 0,
       cA: 0, c1: 0, c2: 0, c3: 0, cb2: 0, cb3: 0, cDim: 1, leak: 0, grey: 0, off: 0, slow: 0 };
     if (ID === "S05") {
       const tAtm = w("L007", "大气");
@@ -250,13 +252,15 @@ window.UNDERBODY = (SCENE, SHOT) => {
       const th = Math.PI * eio(seg(t, SC.f0, SC.f1)), fade = 1 - seg(th, 0, 0.6), tW = w("L008", "车重"), tU = w("L009", "车底气压");
       Object.assign(q, { road: fade, ceil: seg(th, Math.PI - 0.6, Math.PI), skirt: fade, fanL: fade,
         pres: 1 - 0.55 * seg(t, tW - 0.2, tW + 0.4) * (1 - seg(t, tU - 0.3, tU + 0.3)),
-        pulse: pulse(t, w("L008", "这股力")), weight: atWord(t, "L008", "车重"), wnum: atWord(t, "L008", "一千七百"), support: 1,
+        pulse: pulse(t, w("L008", "这股力")), weight: atWord(t, "L008", "车重"), wgoal: atWord(t, "L008", "目标"), wnum: atWord(t, "L008", "一千七百"),
+        just: eo(seg(t, tW + 0.4, tW + 0.9)), support: 1,
         cavHi: atWord(t, "L009", "车底气压") * (1 - seg(t, le("L009") - 0.3, le("L009") + 0.2)),
         bAll: 1, bHead: atWord(t, "L009", "算"), bVal: atWord(t, "L009", "车底气压"), bPct: atWord(t, "L009", "百分之三") });
     }
     if (ID === "S07") {
       const t10 = ls("L010"), tL = SC.leave;
-      Object.assign(q, { ceil: 1, weight: 1, wnum: 1, support: 1 - seg(t, tL - 0.05, tL + 0.15),
+      Object.assign(q, { ceil: 1, weight: 1, wgoal: 1, wnum: 1, support: 1 - seg(t, tL - 0.05, tL + 0.15),
+        just: 1 - seg(t, SC.a, SC.a + 0.4), claim: atWord(t, "L010", "两千五百"),
         pres: 1 - 0.5 * seg(t, t10, t10 + 0.5) + 0.5 * seg(t, tL - 0.2, tL + 0.3), pulse: pulse(t, w("L010", "两千五百")),
         bAll: 1 - seg(t, t10 - 0.1, t10 + 0.4), bHead: 1, bVal: 1, bPct: 1,
         cA: seg(t, t10, t10 + 0.5), c1: eio(seg(t, t10 + 0.1, t10 + 0.9)), c2: eio(seg(t, w("L010", "两千五百") - 0.1, w("L010", "两千五百") + 0.7)),
@@ -337,8 +341,8 @@ window.UNDERBODY = (SCENE, SHOT) => {
     }
     // S05: the excess of each roof arrow over the underbody ones gathers into the suction arrow
     if (q.excess > 0 && q.merge < 1) {
-      const [cx, cy] = P(GE.CG.x, GE.CG.y, true), full = (st.F / WGT) * FPX * LY.s * st.k, dv = [-Math.sin(st.th), Math.cos(st.th)];
-      const tx = cx + dv[0] * full * 0.5, ty = cy + dv[1] * full * 0.5, m = eio(q.merge);
+      const [px, py] = P(PCX, ROAD.y - 3, true), full = (st.F / WGT) * FPX * LY.s * st.k, dv = [-Math.sin(st.th), Math.cos(st.th)];
+      const tx = px - dv[0] * full * 0.5, ty = py - dv[1] * full * 0.5, m = eio(q.merge);
       for (const x of roofX) {
         const y = topAt(x) - 4 - LP, [ax, ay] = P(x, y, true), [bx, by] = P(x, y + LP * (1 - st.rho), true);
         const mx = lerp((ax + bx) / 2, tx, m), my = lerp((ay + by) / 2, ty, m), hl = (Math.hypot(bx - ax, by - ay) / 2) * (1 - 0.6 * m);
@@ -349,11 +353,15 @@ window.UNDERBODY = (SCENE, SHOT) => {
   }
   function drawForces(t, q) {
     const [cx, cy] = P(GE.CG.x, GE.CG.y, true), sc = (FPX * LY.s * st.k) / WGT, dv = [-Math.sin(st.th), Math.cos(st.th)];
-    // suction: on the car, toward the surface it sticks to
+    // suction: on the car, at the centre of the sealed area, tip on the side that touches the surface
+    const [px, py] = P(PCX, ROAD.y - 3, true);
     const ls_ = st.F * sc * eio(seg(q.merge, 0.35, 1)), sa = ID === "S05" ? q.merge : 1;
-    arrow(cx, cy, cx + dv[0] * ls_, cy + dv[1] * ls_, PAL.accent, 7 + 3 * q.pulse, sa, { halo: true, head: 28 });
-    const sl = clamp(st.F / F_CLAIM * 3) * sa * (1 - 0.5 * q.grey);
-    text("吸力", cx + dv[0] * ls_ * 0.55 - 18 * U, cy + dv[1] * ls_ * 0.55, SZ.label, { color: q.grey > 0.5 ? PAL.inkSoft : PAL.accent, align: "right", alpha: sl, bg: true });
+    arrow(px - dv[0] * ls_, py - dv[1] * ls_, px, py, PAL.accent, 7 + 3 * q.pulse, sa, { halo: true, head: 28 });
+    const sl = clamp(st.F / F_CLAIM * 3) * sa * (1 - 0.5 * q.grey), lx0 = px - dv[0] * ls_ * 0.5 - 18 * U, ly0 = py - dv[1] * ls_ * 0.5;
+    text("吸力", lx0, ly0, SZ.label, { color: q.grey > 0.5 ? PAL.inkSoft : PAL.accent, align: "right", alpha: sl, bg: true });
+    text("= 车重，刚好托住", lx0, ly0 + 40 * U, 26, { align: "right", alpha: q.just * sl, bg: true });
+    const cw = measure("宣称", SZ.small) + 22 * U;
+    badge("宣称", lx0 - cw, ly0 + 40 * U, PAL.accent, q.claim * sl);
     // ceiling on the tyres: from the contact toward the car, only while touching and suction > weight
     if (q.support > 0 && st.F > WGT && st.dy === 0) {
       const n = ((st.F - WGT) / 2) * sc, a = q.support * seg(st.F - WGT, 0, 0.08 * WGT);
@@ -369,7 +377,9 @@ window.UNDERBODY = (SCENE, SHOT) => {
       g.fillStyle = PAL.paper; g.strokeStyle = PAL.ink; g.lineWidth = 2 * U; g.beginPath(); g.arc(0, 0, R, 0, 2 * Math.PI); g.fill(); g.stroke();
       g.fillStyle = PAL.ink; for (const a0 of [0, Math.PI]) { g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, R, a0, a0 + Math.PI / 2); g.closePath(); g.fill(); } g.restore();
       const lx = cx + 24 * U, ly = cy + WGT * sc * 0.42;
-      const w1 = text("车重", lx, ly, SZ.label, { alpha: q.weight, bg: true });
+      const wg = measure("目标", SZ.label);
+      text("车重", lx + wg, ly, SZ.label, { alpha: q.weight * (1 - q.wgoal), bg: true });
+      const w1 = text("目标车重", lx, ly, SZ.label, { alpha: q.weight * q.wgoal, bg: true }) || measure("目标车重", SZ.label);
       const w2 = text(`${kgfmt(M.massCar)} kg`, lx + w1 + 12 * U, ly, SZ.label, { alpha: q.wnum, bg: true });
       badge("宣称", lx + w1 + w2 + 34 * U, ly, PAL.accent, q.wnum);
       text(`≈ ${(WGT / 1000).toFixed(1)} kN`, lx, ly + 40 * U, 26, { font: MONO, weight: 500, color: PAL.inkSoft, alpha: q.wnum, bg: true });
@@ -400,7 +410,7 @@ window.UNDERBODY = (SCENE, SHOT) => {
     text(`${(M.pAtm / 1000).toFixed(1)} kPa`, R, Y + 18 * U, 40, { font: MONO, weight: 600, color: cA, align: "right", alpha: q.atm * ga });
     text("车底气压", X, Y + 78 * U, SZ.label, { color: cU, alpha: q.under * ga });
     text(`${((M.pAtm - st.dp) / 1000).toFixed(1)} kPa`, R, Y + 78 * U, 40, { font: MONO, weight: 600, color: cU, align: "right", alpha: q.under * ga });
-    text(`示意：箭头差值放大 ${EXAG} 倍`, X, Y + 128 * U, SZ.small, { color: PAL.inkSoft, weight: 500, alpha: q.note });
+    text(`示意：箭头差值放大 ${EXAG} 倍`, X, Y + 128 * U, SZ.note, { color: PAL.inkSoft, weight: 500, alpha: q.note });
     text("吸力模型不再适用", X, Y + 132 * U, 34, { color: PAL.accent, alpha: q.off });
     // B: the pressure drop needed to hang upside down (估算)
     const yb = Y + 200 * U, bA = q.bAll;
@@ -412,7 +422,7 @@ window.UNDERBODY = (SCENE, SHOT) => {
       g.save(); g.globalAlpha = q.bVal * bA; g.fillStyle = "rgba(46,134,171,0.28)"; g.fillRect(X, by, PW - sl, bh);
       g.fillStyle = q.bPct > 0 ? PAL.accent : PAL.rule; g.globalAlpha = q.bVal * bA * (0.4 + 0.6 * q.bPct); g.fillRect(X + PW - sl, by, sl, bh);
       g.globalAlpha = q.bVal * bA; g.strokeStyle = PAL.ink; g.lineWidth = 1.5 * U; g.strokeRect(X, by, PW, bh); g.restore();
-      text("按比例：整条 = 大气压", X, by + bh + 22 * U, SZ.small, { color: PAL.inkSoft, weight: 500, alpha: q.bVal * bA });
+      text("按比例：整条 = 大气压", X, by + bh + 22 * U, SZ.note, { color: PAL.inkSoft, weight: 500, alpha: q.bVal * bA });
       badge(`估算：车底面积按 ${M.areaUnder} m²`, X, by + bh + 70 * U, PAL.second, q.bVal * bA);
     }
     // C: needed vs claimed vs shown on the live stream (kgf)
@@ -434,7 +444,7 @@ window.UNDERBODY = (SCENE, SHOT) => {
       const wx = bx(M.kgf(WGT)), y1 = yb + (52 + 2 * 88 + 54) * U;
       g.save(); g.globalAlpha = ca * clamp(q.c1 * 2); g.strokeStyle = PAL.ink; g.lineWidth = 2 * U; g.setLineDash([7 * U, 6 * U]); g.beginPath();
       for (let i = 0; i < 3; i++) { const by = yb + (52 + i * 88 + 34) * U; g.moveTo(wx, by - 14 * U); g.lineTo(wx, i === 2 ? y1 : by + 18 * U); } g.stroke(); g.restore();
-      text("车重", wx, y1 + 18 * U, SZ.small, { align: "center", color: PAL.inkSoft, alpha: ca * clamp(q.c1 * 2) });
+      text("车重", wx, y1 + 18 * U, SZ.note, { align: "center", color: PAL.inkSoft, alpha: ca * clamp(q.c1 * 2) });
     }
   }
 

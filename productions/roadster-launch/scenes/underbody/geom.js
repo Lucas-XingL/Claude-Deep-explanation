@@ -12,6 +12,6 @@ window.GEOM = {
   FAN: { x: 1086, y: 256, r: 26, blades: 6 },
   EXIT: { x: 850, y: 270 },          // cavity → behind the rear wheel → duct inlet
   INLET: { x: 1040, y: 262 }, OUTLET: { x: 1134, y: 250 },
-  CG: { x: 580, y: 180 },            // centre of mass (示意)
+  CG: { x: 500, y: 180 },            // centre of mass (示意; not published), clear of the suction arrow
   CONTACT: [{ x: 195, y: 307 }, { x: 942, y: 307 }],
 };
