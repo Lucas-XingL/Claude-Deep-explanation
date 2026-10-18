@@ -1,0 +1,104 @@
+<!doctype html>
+<!--
+  2D scene on the same paper as the anatomy shots (plate frame, Fig number, corner text).
+  Copy to scenes/<name>/index.html. It reads the numeric model from ../_shared/model.js and the
+  shot's narration times from window.SHOT (capture_frames.mjs --timeline … --shot …).
+  Patterns used in the watch and Roadster samples:
+    - MODES keyed by SHOT.id: one scene file serves several shots with different behaviour.
+    - slowAt(t)/tauAt(t): slow motion that can change mid-shot while the machine time stays
+      continuous (integrate the rate instead of multiplying t).
+    - Labels, highlights and arrows appear with the line that names them (atLine / during).
+    - A sprite of the anatomy object (scripts/anatomy/sprite.sh) keeps 2D and 3D shots identical.
+-->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../_shared/paper.css">
+</head>
+<body>
+<div class="mo">
+  <div class="mo-bg"></div>
+  <canvas id="c"></canvas>
+  <div class="mo-vignette"></div>
+  <div class="mo-plate">
+    <span class="mo-corner" data-c="fig">Fig 2</span>
+    <span class="mo-corner" data-c="title">ANATOMY · 标题</span>
+    <span class="mo-corner" data-c="hint" id="hint">左下角说明</span>
+    <span class="mo-corner" data-c="readout" id="readout"></span>
+  </div>
+</div>
+<script src="../_shared/model.js"></script>
+<script>
+const SCENE = window.SCENE || { width: 1920, height: 1080, fps: 30, duration: 10 };
+const SHOT = window.SHOT || { id: "preview", duration: 10, lines: [{ id: "L001", start: 0.3, end: 4.5 }, { id: "L002", start: 4.8, end: 9.5 }] };
+const DURATION = SHOT.duration || SCENE.duration;
+const W = SCENE.width, H = SCENE.height, U = Math.min(W, H) / 1080, PORTRAIT = H > W;
+document.documentElement.style.setProperty("--mo-w", W + "px");
+document.documentElement.style.setProperty("--mo-h", H + "px");
+const cv = document.getElementById("c"); cv.width = W; cv.height = H;
+const g = cv.getContext("2d");
+const INK = "#2b2925", SOFT = "rgba(43,41,37,.55)", ACCENT = "#d9562f", BLUE = "#2e86ab";
+const FONT = '"Noto Sans CJK SC","Source Han Sans SC","PingFang SC","Microsoft YaHei","WenQuanYi Zen Hei",sans-serif';
+const MONO = 'ui-monospace,"SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace';
+
+// ---- timing helpers ----------------------------------------------------------------------------
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eo = (k) => 1 - Math.pow(1 - k, 3);
+const eio = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+const line = (id) => SHOT.lines.find((l) => l.id === id) || null;
+// 0→1 just as line `id` starts (things that appear when they are named).
+const atLine = (t, id, len = 0.6, lead = 0.15) => { const l = line(id); return l ? eo(seg(t, l.start - lead, l.start - lead + len)) : 0; };
+// 1 while line `id` is spoken (plus a short tail), 0 otherwise (highlights that come and go).
+const during = (t, id) => { const l = line(id); return l ? seg(t, l.start - 0.2, l.start) * (1 - seg(t, l.end + 0.6, l.end + 1.0)) : 0; };
+
+// ---- shot modes and machine time -------------------------------------------------------------------
+const MODES = { default: { slow: 1, tau0: 0 } };
+const MO = MODES[SHOT.id] || MODES.default;
+const slowAt = (t) => MO.slow;   // e.g. slower while a line is spoken: blend MO.slow and MO.slow / 3 with during()
+const tauAt = (t) => { let tau = MO.tau0; const dt = 1 / 240; for (let s = 0; s < t; s += dt) tau += slowAt(s) * Math.min(dt, t - s); return tau; };
+
+// ---- drawing helpers -------------------------------------------------------------------------------
+function text(s, x, y, size, { color = INK, weight = 600, align = "left", font = FONT, alpha = 1 } = {}) {
+  if (alpha <= 0) return;
+  g.save(); g.globalAlpha = alpha; g.fillStyle = color; g.textAlign = align; g.textBaseline = "middle";
+  g.font = `${weight} ${size * U}px ${font}`; g.fillText(s, x, y); g.restore();
+}
+// Evidence badge (research.md levels): "宣称" "估算" "示意" "复原想象" "模拟" "AI 生成画面"
+function badge(label, x, y, color = ACCENT, alpha = 1) {
+  if (alpha <= 0) return;
+  g.save(); g.globalAlpha = alpha; g.font = `600 ${22 * U}px ${FONT}`;
+  const w = g.measureText(label).width + 22 * U, h = 36 * U;
+  g.strokeStyle = color; g.lineWidth = 2 * U; g.beginPath(); g.roundRect(x, y - h / 2, w, h, 6 * U); g.stroke();
+  g.fillStyle = color; g.textBaseline = "middle"; g.fillText(label, x + 11 * U, y + 1 * U); g.restore();
+}
+function arrow(x0, y0, x1, y1, color = ACCENT, width = 6, alpha = 1) {
+  if (alpha <= 0) return;
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  g.save(); g.globalAlpha = alpha; g.strokeStyle = color; g.fillStyle = color; g.lineWidth = width * U; g.lineCap = "round";
+  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1 - Math.cos(a) * 18 * U, y1 - Math.sin(a) * 18 * U); g.stroke();
+  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - Math.cos(a - 0.45) * 26 * U, y1 - Math.sin(a - 0.45) * 26 * U); g.lineTo(x1 - Math.cos(a + 0.45) * 26 * U, y1 - Math.sin(a + 0.45) * 26 * U); g.closePath(); g.fill();
+  g.restore();
+}
+// Optional sprite of the anatomy object (scripts/anatomy/sprite.sh).
+const sprite = null; // e.g. Object.assign(new Image(), { src: "../_shared/object_side.png" })
+window.sceneReady = Promise.all([document.fonts.ready, sprite ? new Promise((r) => (sprite.complete ? r() : (sprite.onload = r))) : null]);
+
+// ---- the scene ---------------------------------------------------------------------------------------
+function draw(t) {
+  g.clearRect(0, 0, W, H);
+  const tau = tauAt(t);
+  // Replace with your scene. Every number from window.MODEL, every appearance tied to a line.
+  const k1 = atLine(t, "L001");
+  text("一个由模型驱动的读数", W * 0.1, H * 0.4, 56, { alpha: k1 });
+  const v = window.MODEL ? window.MODEL.weight() / 1000 : 0;
+  text(`${v.toFixed(1)} kN`, W * 0.1, H * 0.5, 72, { color: ACCENT, font: MONO, alpha: atLine(t, "L002") });
+  badge("估算", W * 0.1, H * 0.6, BLUE, atLine(t, "L002"));
+  document.getElementById("readout").textContent = `t ${t.toFixed(2)} s · τ ${tau.toFixed(3)}`;
+}
+
+window.renderFrame = (t) => draw(t);
+if (!window.__seek) { const t0 = performance.now(); const loop = () => { draw(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); }; requestAnimationFrame(loop); } else draw(0);
+</script>
+</body>
+</html>

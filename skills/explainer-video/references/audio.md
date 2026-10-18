@@ -63,5 +63,5 @@ python3 scripts/timeline.py <proj>       # 读 storyboard.json 和 script.md，�
 
 有零件咬合、按钮按下、地图上路线到站这类明确的动作时，可以加很轻的音效：
 - 音效来源要有授权，或者自己合成（numpy 生成短促的噪声或正弦，或用 Web Audio、ffmpeg）。
-- **音效的时间点要从画面用的同一个模型算出来**。例如机械表的“滴答”就是 `movement(tau)` 里每次落齿的时刻，推进器的嘶声包络就是推力曲线。这样音画天然同步。示例见 `productions/watch/scenes/_shared/sfx.py` 和 `productions/roadster/scenes/_shared/sfx.py`。
+- **音效的时间点要从画面用的同一个模型算出来**。例如机械表的“滴答”就是 `movement(tau)` 里每次落齿的时刻，推进器的嘶声包络就是推力曲线。这样音画天然同步。从 `templates/sfx.py` 改起：短促的撞击用 `hits`，持续的嘶声、风声、嗡声用 `bed`。完整实例见仓库的 `productions/watch/scenes/_shared/sfx.py` 和 `productions/roadster/scenes/_shared/sfx.py`。
 - 把音效做成一条和成片一样长的音轨，合成时加 `assemble.py --sfx audio/sfx.wav --sfx-volume 0.6`。

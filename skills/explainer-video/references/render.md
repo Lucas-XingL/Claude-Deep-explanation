@@ -42,7 +42,7 @@ node scripts/capture_frames.mjs scenes/S05/index.html --timeline audio/timeline.
 node scripts/capture_frames.mjs scenes/S05/index.html --timeline audio/vertical/timeline.json --shot V03 --out scenes/V03/clip.mp4
 ```
 
-- **速度**：1080p 的 Canvas 场景大约每秒渲染 5–10 帧，所以 1 秒成片大约要 3–6 秒。5 分钟的片子可以同时开 3–4 个进程，按镜头并行渲染。
+- **速度**：1080p 的 Canvas 场景大约每秒渲染 5–10 帧，所以 1 秒成片大约要 3–6 秒。4 核机器上和其他渲染同时跑时，1 秒成片要 10–20 秒。5 分钟的片子可以同时开 3–4 个进程，按镜头并行渲染。
 - **WebGL**：无头 Chromium 用软件渲染（SwiftShader），所以比较慢。先用 `--width 960 --height 540` 预览，确认后再出全尺寸。
 - **其他渲染器**输出的视频统一放到 `scenes/<id>/clip.mp4`：
 
@@ -51,16 +51,41 @@ node scripts/capture_frames.mjs scenes/S05/index.html --timeline audio/vertical/
 | Remotion | `npx remotion render <CompositionId> scenes/S05/clip.mp4 --props='{"timeline":…}'` |
 | HyperFrames | 用它自己的渲染命令（以它的文档为准），输出 mp4 |
 | Manim | `manim -qh --fps 30 -r 1920,1080 scene.py S05`，再把 `media/videos/...` 拷贝过来 |
-| anatomy-reveal | `node motion/build.mjs --duration <秒> --ratio 16:9`，然后 `node motion/render.mjs blur …`，再 `node motion/encode.mjs …`（见 `anatomy-route.md`） |
+| anatomy-reveal | `bash scripts/anatomy/render_shot.sh <工程> <工程>/shots/S05.mjs audio/timeline.json S05 scenes/S05/clip.mp4 --jobs 3`（见 `anatomy-route.md`） |
 | Blender | `blender -b scene.blend -o //frames/f_#### -a`，然后 `ffmpeg -framerate 30 -i frames/f_%04d.png -c:v libx264 -pix_fmt yuv420p clip.mp4` |
 | 视频模型 | 下载后用 `ffmpeg -ss … -t …` 裁剪，统一帧率 |
 
 时长不需要完全一致。`assemble.py` 会把每段片段裁剪到时间轴给的长度，不够的话定格最后一帧补齐。不过片段最好比时间轴稍长一点，免得定格太久。
 
-## 4. 合成（scripts/assemble.py）
+## 4. 后台流水线（长渲染）
+
+anatomy 镜头一段要渲染几十分钟。把渲染放到后台，再写一个收尾脚本：等渲染全部结束后编码、合成、做接触表，然后用 agent 的后台任务机制（在 Claude Code 里是 `run_in_background`）运行它，完成时会有通知。示意：
+
+```bash
+#!/usr/bin/env bash
+set -u
+SK=<skill>/scripts
+# 1. 并行渲染（每个都在后台）
+bash $SK/anatomy/render_shot.sh obj obj/shots/S01.mjs audio/sample/timeline.json S01 scenes/S01/clip.mp4 --jobs 2 > log/S01.log 2>&1 &
+P1=$!
+node $SK/capture_frames.mjs scenes/diagram/index.html --timeline audio/sample/timeline.json --shot S02 --out scenes/S02/clip.mp4 > log/S02.log 2>&1 &
+P2=$!
+wait $P1 $P2
+# 2. 合成和检查
+python3 $SK/assemble.py . --storyboard storyboard.sample.json --timeline audio/sample/timeline.json \
+  --narration audio/sample/narration.wav --subtitles audio/sample/subs.srt \
+  --bgm audio/sample/bed.wav --sfx audio/sample/sfx.wav --out out/sample.mp4
+bash $SK/contact_sheet.sh out/sample.mp4 check/sample 2.5 4 4
+```
+
+- 停止进程时按 PID 停，不要用 `pkill -f "<关键词>"`：执行这条命令的 shell 自己的命令行里也含有这个关键词，会把自己也杀掉。
+- 流水线跑完后，先看接触表和检查帧，确认没问题再交付。日志里写着 “wrote …” 不代表画面就是对的。
+
+## 5. 合成（scripts/assemble.py）
 
 ```sh
 python3 scripts/assemble.py <proj> --bgm audio/bgm.mp3            # 默认：烧录字幕、背景音乐自动避让口播、响度 −16 LUFS
+python3 scripts/assemble.py <proj> --bgm audio/bed.wav --bgm-volume 0.18 --sfx audio/sfx.wav --sfx-volume 0.5   # 加音效轨
 python3 scripts/assemble.py <proj> --subs soft --out out/final_softsubs.mp4
 python3 scripts/assemble.py <proj> --storyboard storyboard.vertical.json --timeline audio/vertical/timeline.json \
         --narration audio/vertical/narration.wav --subtitles audio/vertical/subs.srt --out out/vertical.mp4
@@ -74,7 +99,7 @@ python3 scripts/assemble.py <proj> --storyboard storyboard.vertical.json --timel
 
 **还没做好的镜头会自动生成一张占位卡**，显示镜头编号和 `visual` 描述。所以第 5 步做完就可以先剪一版“动态分镜”：有完整配音和占位卡的样片，先检查节奏和时长，再逐个替换成真正的镜头。
 
-## 5. 竖版剪辑
+## 6. 竖版剪辑
 
 1. 写 `script.vertical.md`，内容 60–90 秒；再写 `storyboard.vertical.json`，`meta` 设为 1080×1920，镜头编号用 `V01`…。
 2. 配音和时间轴，全部放进 `audio/vertical/`，这样和横版的句子编号重复也不会冲突：
@@ -87,7 +112,7 @@ python3 scripts/assemble.py <proj> --storyboard storyboard.vertical.json --timel
 4. 合成时把 `--storyboard`、`--timeline`、`--narration` 和 `--subtitles` 都指向竖版的文件。
 5. 封面：挑一帧最强的画面，加上一行问题（不超过 12 个字），可以用 `capture_frames.mjs --stills` 从封面场景出图。
 
-## 6. 导出规格
+## 7. 导出规格
 
 | 用途 | 规格 |
 |---|---|

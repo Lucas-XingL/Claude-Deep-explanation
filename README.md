@@ -80,7 +80,10 @@ skills/explainer-video/
     render.md              逐帧渲染约定、各渲染器命令、合成、竖版剪辑
     verify.md              检查清单和交付说明
     rights.md              素材、肖像、商标
-  templates/               brief.md、choice-card.md、style.json、scene.html
+  templates/               brief.md、choice-card.md、style.json、scene.html、
+                           scene-paper.html 和 paper.css（纸面风 2D 场景）、model.js（数值模型）、
+                           anatomy-shot.mjs（anatomy 镜头关键帧）、sfx.py（模型驱动的音效）、
+                           research-brief.md（研究子代理的任务说明）
   scripts/
     tts_lines.py           分句配音（自定义命令、edge-tts 或占位音）
     timeline.py            分镜 + 脚本 + 配音 → timeline.json、narration.wav、subs.srt
@@ -89,9 +92,23 @@ skills/explainer-video/
     check_tts.py           把配音转写回文字、和脚本对比，找出读错的句子（faster-whisper）
     make_bed.py            没有授权音乐时，合成一段环境音床
     beats.py               音乐节拍分析，对齐镜头边界
+    anatomy/setup_shots.mjs   让 anatomy-reveal 工程支持按镜头构建
+    anatomy/render_shot.sh    一个 anatomy 镜头：构建、并行渲染、编码、检查时长、导出检查帧
+    anatomy/sprite.sh         从 anatomy 模型抠出透明背景的贴图，给 2D 场景用
     contact_sheet.sh       接触表，检查黑帧、定格和响度
   examples/mini/           能跑通的最小工程
 ```
+
+## 实例：两支样片
+
+`productions/` 里是用这个 skill 做的两支样片的完整工程。skill 的很多内容是根据做这两支片子的经验修订的。
+
+| 工程 | 内容 |
+|---|---|
+| `productions/watch/` | 机械表为什么不用电池也能一直走：146 个零件的示意机芯（anatomy），2D 瑞士杠杆擒纵，滴答声由模型驱动 |
+| `productions/roadster/` | 特斯拉新 Roadster 真的能飞吗：事实分级研究（截至 2026-10-18），104 个零件的中性外观跑车（anatomy），推力测力台，气量估算 |
+
+重建方法见 `productions/README.md`。生成物（配音、帧、mp4）不在仓库里。
 
 ## 致谢
 
