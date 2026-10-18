@@ -12,7 +12,7 @@
   "assets": {
     "opening": "特斯拉官方直播里车倒挂在坡道顶下方的几秒（经看看新闻在 B 站转载，research/assets.md A01–A04）；scenes/_shared/opening/ 下的 clip.mp4、last.png、edges.png",
     "ramp2d": "纸面风侧视坡道：弯曲坡道和车的侧视贴图（scenes/_shared/car_side.png，从 anatomy 模型抠出），scenes/ramp/",
-    "car3d": "anatomy 剖解跑车，104 个零件，风扇、裙边、气瓶、喷口都能动（scenes/_shared/car/）",
+    "car3d": "anatomy 剖解跑车，108 个零件（加了气瓶到喷口的示意管路），风扇、裙边、外壳、气瓶、喷口都能动和高亮（scenes/_shared/car/）",
     "cards": "HyperFrames 纸面主题信息卡（templates/hyperframes/），scenes/S03/、scenes/S12/",
     "underbody": "纸面风车底剖面：车身、裙边、风扇、路面或坡道顶；车底压强、大气压箭头、车重箭头、吸力条都读 model.js，scenes/underbody/",
     "thrust2d": "纸面风侧视推力图：同一张车贴图、气瓶、喷口、喷流、反作用力、重心和力臂；推力条和车重条读 model.js，scenes/thrust/",
