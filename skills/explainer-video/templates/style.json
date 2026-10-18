@@ -46,6 +46,7 @@
     "R": { "label": "复原想象", "color": "second" },
     "S": { "label": "模拟", "color": "second" },
     "G": { "label": "AI 生成画面", "color": "inkSoft" },
+    "G_bg": { "label": "AI 生成背景", "color": "inkSoft", "_note": "纯装饰的生成背景：角落小标，不放大" },
     "I": null
   },
   "motion": {

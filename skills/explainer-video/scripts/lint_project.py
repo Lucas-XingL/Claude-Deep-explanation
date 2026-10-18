@@ -149,6 +149,8 @@ def check_board(proj, path, script_texts, facts, full):
             report("WARN", where, "真实画面或 AI 还原的镜头要写 credit（屏幕上的来源署名，见 footage.md）")
         if route == "R8" and not any("AI" in str(x) for x in shot.get("onscreen", [])):
             report("WARN", where, "R8 镜头的 onscreen 里要有“AI 还原画面”或“AI 生成画面”角标")
+        if shot.get("ai_background") and not any("AI 生成背景" in str(x) for x in shot.get("onscreen", [])):
+            report("WARN", where, "用了 AI 生成的装饰性背景，onscreen 里要有角落小标“AI 生成背景”（见 rights.md 第 5 节）")
         for fr in shot.get("frames", []):
             if fr.get("image") and not (proj / fr["image"]).exists():
                 report("WARN", where, f"方案页的画面还不存在：{fr['image']}")
