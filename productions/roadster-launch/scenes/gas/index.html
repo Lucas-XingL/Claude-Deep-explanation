@@ -210,7 +210,7 @@ function draw(t) {
   const x5 = AX.x0 + M.burnClaim * AX.pxs;
   if (k5 > 0) {
     g.save(); g.globalAlpha = k5; g.strokeStyle = INK; g.lineWidth = 3; g.setLineDash([7, 6]);
-    g.beginPath(); g.moveTo(x5, AX.y - 18); g.lineTo(x5, AX.y + 58); g.stroke(); g.restore();
+    g.beginPath(); g.moveTo(x5, AX.y - 18); g.lineTo(x5, AX.y + 14); g.stroke(); g.restore();
     g.save(); g.globalAlpha = k5; g.fillStyle = INK; g.beginPath(); g.moveTo(x5, AX.y - 14); g.lineTo(x5 - 11, AX.y - 32); g.lineTo(x5 + 11, AX.y - 32); g.closePath(); g.fill(); g.restore();
   }
   const l5 = `工程师说 ≈ ${M.burnClaim} 秒`, w5 = measure(l5, 30, FONT, 700);
