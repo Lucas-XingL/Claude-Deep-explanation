@@ -1,0 +1,209 @@
+<!doctype html>
+<!--
+  S12 · FIG 8 · 监管与未知 (storyboard S12, lines L021–L022; facts F16, F17).
+  Made from templates/hyperframes/index.html; same series as scenes/S03 (title position, corner FIG,
+  card style, notes). Left: the FAA quote card (据报道, CBS 2026-10-16), on "不算航空器".
+  Right: three "未公布" cards, each on its phrase in L022. Times come from SHOT (shot.js) via wordAt.
+  Contract kept: one paused GSAP timeline as window.__timelines["main"] lasting the whole shot;
+  GSAP moves elements with x/y/scale only; nothing in the bottom 16 % (subtitle band);
+  only the three local font families.
+-->
+<html lang="zh" data-theme="paper">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1920, height=1080" />
+<link rel="stylesheet" href="../_shared/fonts/fonts.css" />
+<script src="../_shared/vendor/gsap.min.js"></script>
+<script src="shot.js"></script>
+<style>
+  :root {
+    /* style.json palette (paper) */
+    --bg-0: #F4F1EA; --bg-1: #FBF9F4; --ink: #1D1C1A; --soft: #6B675F; --rule: rgba(29, 28, 26, .12);
+    --card: rgba(255, 255, 255, .72); --card-edge: rgba(29, 28, 26, .14); --shadow: 0 24px 50px rgba(60, 50, 38, .12);
+    /* accent and second darkened for small text: hyperframes check needs WCAG AA (4.5:1) */
+    --fact: #23708F; --claim: #B53F28; --num-a: #1D1C1A; --num-b: #4C4A45;
+    --glow: rgba(46, 134, 171, .10); --glow-2: rgba(228, 87, 46, .06);
+    /* Only local fonts (fonts.css): a system font name makes the render depend on the machine. */
+    --sans: "Noto Sans SC Variable", sans-serif;
+    --serif: "Noto Serif SC Variable", serif;
+    --mono: "Plex Mono", monospace;
+  }
+  [data-theme="dark"] {
+    /* style.json dark, with glass cards */
+    --bg-0: #070b14; --bg-1: #0e1626; --ink: #eef2f7; --soft: rgba(238, 242, 247, .62); --rule: rgba(160, 190, 230, .16);
+    --card: linear-gradient(135deg, rgba(255, 255, 255, .11), rgba(255, 255, 255, .03)); --card-edge: rgba(190, 215, 255, .28);
+    --shadow: 0 34px 70px rgba(0, 0, 0, .38), inset 0 1px 0 rgba(255, 255, 255, .2);
+    --fact: #5fe0a8; --claim: #ff8a5c; --num-a: #ffffff; --num-b: #9fd2ff;
+    --glow: rgba(124, 196, 255, .22); --glow-2: rgba(120, 60, 140, .25);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-0); }
+  #root { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: var(--sans); color: var(--ink); }
+  #scene { position: absolute; inset: 0; }
+  .bg { position: absolute; inset: 0; background: radial-gradient(1200px 700px at 30% 20%, var(--glow) 0%, transparent 60%), radial-gradient(900px 600px at 85% 80%, var(--glow-2) 0%, transparent 60%), linear-gradient(180deg, var(--bg-1), var(--bg-0)); }
+  .grid { position: absolute; inset: -10%; background-image: linear-gradient(var(--rule) 1px, transparent 1px), linear-gradient(90deg, var(--rule) 1px, transparent 1px); background-size: 80px 80px; opacity: .5; }
+  .glow { position: absolute; width: 900px; height: 900px; left: 520px; top: 120px; border-radius: 50%; background: radial-gradient(circle, var(--glow), transparent 65%); }
+  .stage { position: absolute; inset: 0; }
+  /* Safe area (style.json): x 7 %, top 8 %; the bottom 16 % is the subtitle band. */
+  .kicker { position: absolute; left: 120px; top: 88px; font-family: var(--mono); font-size: 26px; letter-spacing: .18em; color: var(--fact); }
+  .title { position: absolute; left: 120px; top: 126px; font-family: var(--serif); font-weight: 700; font-size: 92px; letter-spacing: .02em; display: flex; gap: 4px; }
+  .title span { display: inline-block; }
+  .col { position: absolute; top: 290px; display: flex; flex-direction: column; gap: 20px; }
+  /* S03 has three 560 px columns; here the quote takes the left two thirds, the list the right third. */
+  .col.left { left: 120px; width: 860px; } .col.right { left: 1120px; width: 680px; }
+  .col h3 { font-size: 32px; font-weight: 600; letter-spacing: .12em; display: flex; align-items: center; gap: 14px; }
+  .col h3 i { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+  .left h3 { color: var(--fact); } .left h3 i { background: var(--fact); box-shadow: 0 0 20px var(--fact); }
+  .right h3 { color: var(--claim); } .right h3 i { background: var(--claim); box-shadow: 0 0 20px var(--claim); }
+  .card { position: relative; height: 136px; border-radius: 26px; padding: 0 34px; display: flex; align-items: center; gap: 26px; background: var(--card); border: 1.5px solid var(--card-edge); box-shadow: var(--shadow); overflow: hidden; }
+  .card b { font-size: 50px; font-weight: 700; line-height: 1.1; }
+  .card small { font-size: 27px; color: var(--soft); display: block; margin-top: 6px; }
+  .card .ic { flex: none; width: 72px; height: 72px; border-radius: 20px; display: grid; place-items: center; font-family: var(--mono); font-size: 30px; font-weight: 600; }
+  .left .ic { background: color-mix(in srgb, var(--fact) 16%, transparent); color: var(--fact); }
+  .right .ic { background: color-mix(in srgb, var(--claim) 16%, transparent); color: var(--claim); }
+  .right .ic.u3 { font-size: 24px; letter-spacing: -.02em; }
+  .card .sheen { position: absolute; top: 0; bottom: 0; width: 180px; left: -220px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .22), transparent); transform: skewX(-18deg); }
+  .tag { position: absolute; right: 24px; bottom: 20px; font-size: 22px; padding: 4px 14px; border-radius: 999px; border: 1.5px solid currentColor; color: var(--claim); }
+  /* Not published yet: the edge is dashed (uncertain), the rest is the S03 card. */
+  .card.unk { border: 2px dashed color-mix(in srgb, var(--claim) 42%, transparent); }
+  /* The quote card: same card, taller, with a left rule in the fact colour. */
+  .card.quote { height: 448px; padding: 0 56px 0 64px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; }
+  .quote .qbar { position: absolute; left: 0; top: 0; bottom: 0; width: 10px; background: var(--fact); }
+  .quote .qtext { font-family: var(--serif); font-weight: 700; font-size: 66px; line-height: 1.2; letter-spacing: .01em; display: flex; }
+  .quote .qtext span { display: inline-block; }
+  .quote .qrule { width: 100%; height: 1.5px; margin: 40px 0 36px; background: var(--card-edge); }
+  .quote .qby { display: flex; align-items: center; gap: 26px; }
+  .quote .qby b { font-size: 40px; }
+  .quote .qby small { font-family: var(--mono); font-size: 24px; letter-spacing: .04em; }
+  .quote .tag.rep { color: var(--soft); font-size: 24px; right: 32px; bottom: 28px; }
+  .note { position: absolute; top: 834px; font-size: 32px; color: var(--soft); display: flex; align-items: center; gap: 14px; }
+  .note.l { left: 120px; } .note.r { left: 1120px; }
+  .note i { font-style: normal; font-size: 22px; color: var(--fact); }
+  .note.r i { color: var(--claim); }
+  .corner { position: absolute; right: 120px; top: 92px; font-family: var(--mono); font-size: 20px; color: var(--soft); letter-spacing: .1em; }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="10" data-width="1920" data-height="1080">
+  <div id="scene">
+    <div class="bg"></div>
+    <div class="grid" id="grid"></div>
+    <div class="glow" id="glow"></div>
+    <div class="stage" id="stage">
+      <div class="kicker" id="kicker"></div>
+      <h1 class="title" id="title"></h1>
+      <div class="col left" id="left">
+        <h3 id="lh"><i></i><span></span></h3>
+        <div class="card quote" id="quote">
+          <div class="qbar"></div>
+          <div class="qtext" id="qtext"></div>
+          <div class="qrule" id="qrule"></div>
+          <div class="qby" id="qby"><div class="ic" id="qic"></div><div><b id="qwho"></b><small id="qsrc"></small></div></div>
+          <div class="tag rep" id="qtag"></div>
+          <div class="sheen" data-layout-allow-overflow></div>
+        </div>
+      </div>
+      <div class="col right" id="right"><h3 id="rh"><i></i><span></span></h3></div>
+      <div class="note l" id="note"><i>●</i><span></span></div>
+      <div class="note r" id="note2"><i>●</i><span></span></div>
+    </div>
+    <div class="corner" id="corner"></div>
+  </div>
+</div>
+<script>
+  // Preview without a build: a stand-in shot. render_shot.sh always writes the real shot.js.
+  const SHOT = window.SHOT || { id: "preview", duration: 11.84, lines: [
+    { id: "L021", start: 0.2, end: 4.45, text: "美国联邦航空局的说法是：它不算航空器。" },
+    { id: "L022", start: 5.05, end: 11.24, text: "量产车多重、电池多大、补满一次气要多久，现在都还没有公布。" } ] };
+  const D = SHOT.duration;
+
+  // What the shot shows (F16, F17). `at` is [line id, phrase]: the element arrives when the phrase is spoken.
+  const CONTENT = {
+    kicker: "ROADSTER · 发布会之后", title: "监管怎么说，还有什么没公布", corner: "FIG 8 · 监管与未知",
+    quote: { head: "监管的说法", headAt: ["L021", "说法"],
+      text: "“不符合航空器的定义”", at: ["L021", "不算航空器"],
+      ic: "FAA", who: "美国联邦航空局（FAA）", src: "CBS News · 2026-10-16",
+      tag: "据报道", tagAt: ["L021", "航空器"] },
+    unknown: { head: "还没公布", items: [
+      { ic: "kg", title: "量产车多重", sub: "只有目标值，没有规格表", tag: "未公布", at: ["L022", "量产车多重"] },
+      { ic: "kWh", title: "电池多大", sub: "容量没有公开", tag: "未公布", at: ["L022", "电池多大"] },
+      { ic: "h", title: "补满一次气要多久", sub: "报道里的说法不一", tag: "未公布", at: ["L022", "补满一次气要多久"] } ] },
+    note: { text: "FAA 没有说明理由", at: ["L021", "航空器"], after: .9 },
+    note2: { text: "截至 2026-10-18", at: ["L022", "还没有公布"] },
+  };
+
+  // wordAt(line, phrase): when the phrase is spoken (word timings from edge-tts; without them,
+  // its position in the line's text). The same matching as atWord in the HTML scene templates.
+  const SKIP = /[\s，。！？；：、,.!?;:“”"'（）()《》—…·-]/g;
+  const wordAt = (id, phrase) => {
+    const l = SHOT.lines.find((x) => x.id === id); if (!l) return 0;
+    const p = (phrase || "").replace(SKIP, "");
+    if (!p) return l.start;
+    if (l.words && l.words.length) {
+      let s = ""; const at = [];
+      for (const w of l.words) { const cs = [...w.text.replace(SKIP, "")]; cs.forEach((c, k) => { s += c; at.push(w.start + (w.end - w.start) * k / cs.length); }); }
+      const k = s.indexOf(p); if (k >= 0) return at[[...s.slice(0, k)].length];
+    }
+    const txt = (l.text || "").replace(SKIP, ""), k = txt.indexOf(p);
+    return k < 0 ? l.start : l.start + (l.end - l.start) * [...txt.slice(0, k)].length / Math.max(1, [...txt].length);
+  };
+  const when = (at) => wordAt(at[0], at[1]);
+
+  // Build the DOM from CONTENT.
+  const $ = (id) => document.getElementById(id);
+  const Q = CONTENT.quote, U = CONTENT.unknown;
+  $("kicker").textContent = CONTENT.kicker; $("corner").textContent = CONTENT.corner;
+  for (const ch of CONTENT.title) { const s = document.createElement("span"); s.textContent = ch; $("title").appendChild(s); }
+  for (const ch of Q.text) { const s = document.createElement("span"); s.textContent = ch; $("qtext").appendChild(s); }
+  $("lh").querySelector("span").textContent = Q.head;
+  $("rh").querySelector("span").textContent = U.head;
+  $("qic").textContent = Q.ic; $("qwho").textContent = Q.who; $("qsrc").textContent = Q.src; $("qtag").textContent = Q.tag;
+  const card = (it, k) => {
+    const el = document.createElement("div"); el.className = "card unk"; el.id = `u${k}`;
+    el.innerHTML = `<div class="ic"></div><div><b></b><small></small></div><div class="tag"></div><div class="sheen" data-layout-allow-overflow></div>`;
+    const ic = el.querySelector(".ic"); ic.textContent = it.ic; if ([...it.ic].length > 2) ic.classList.add("u3");
+    el.querySelector("b").textContent = it.title; el.querySelector("small").textContent = it.sub;
+    el.querySelector(".tag").textContent = it.tag;
+    $("right").appendChild(el); return `#${el.id}`;
+  };
+  $("note").querySelector("span").textContent = CONTENT.note.text; $("note2").querySelector("span").textContent = CONTENT.note2.text;
+
+  const tl = gsap.timeline({ paused: true });
+  // Ambient motion over the whole shot: a slow push-in, drifting grid and light (same as S03).
+  tl.fromTo("#stage", { scale: 1 }, { scale: 1.035, duration: D, ease: "none", transformOrigin: "50% 45%" }, 0);
+  tl.fromTo("#grid", { x: 0, y: 0 }, { x: -60, y: -30, duration: D, ease: "none" }, 0);
+  tl.fromTo("#glow", { x: -120, opacity: .7 }, { opacity: 1, x: 160, duration: D, ease: "sine.inOut" }, 0);
+  // Title before the first line, one character after another.
+  tl.fromTo("#kicker", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .5, ease: "power3.out" }, .05);
+  tl.fromTo("#title span", { opacity: 0, y: 40, rotateX: -60 }, { opacity: 1, y: 0, rotateX: 0, duration: .55, ease: "back.out(1.6)", stagger: .035, transformPerspective: 600 }, .15);
+  tl.fromTo("#corner", { opacity: 0 }, { opacity: 1, duration: .6 }, .4);
+  // A card pops on its word, then a sheen crosses it.
+  const pop = (sel, at, sweep = 900) => {
+    tl.fromTo(sel, { opacity: 0, y: 46, scale: .92, rotateX: 18 }, { opacity: 1, y: 0, scale: 1, rotateX: 0, duration: .6, ease: "back.out(1.5)", transformPerspective: 900 }, at - .08);
+    tl.fromTo(`${sel} .sheen`, { x: 0 }, { x: sweep, duration: .9, ease: "power2.inOut" }, at + .15);
+  };
+  const head = (sel, at, dx) => tl.fromTo(sel, { opacity: 0, x: dx }, { opacity: 1, x: 0, duration: .45, ease: "power3.out" }, at);
+
+  // L021: the header on "说法", the quote card on "不算航空器", its words rising in; then who said it and the badge.
+  head("#lh", when(Q.headAt) - .1, -20);
+  const qa = when(Q.at);
+  pop("#quote", qa, 1200);
+  tl.fromTo("#qtext span", { opacity: 0, y: 34 }, { opacity: 1, y: 0, duration: .45, ease: "power3.out", stagger: .04 }, qa);
+  tl.fromTo("#qrule", { scaleX: 0 }, { scaleX: 1, duration: .6, ease: "power2.inOut", transformOrigin: "0% 50%" }, qa + .3);
+  tl.fromTo("#qby", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .45, ease: "power3.out" }, qa + .4);
+  tl.fromTo("#qtag", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .45, ease: "back.out(2)" }, when(Q.tagAt) + .35);
+  head("#note", when(CONTENT.note.at) + CONTENT.note.after, -16);
+
+  // L022: the list header just before the first phrase, then one dashed card per phrase.
+  const unk = U.items.map((it, k) => [card(it, k), when(it.at)]);
+  head("#rh", unk[0][1] - .35, 20);
+  unk.forEach(([sel, t]) => pop(sel, t));
+  // "还没有公布": every 未公布 tag pulses and the date the list is true for appears.
+  tl.to("#right .tag", { scale: 1.12, duration: .25, yoyo: true, repeat: 1, ease: "power2.inOut", stagger: .08 }, when(CONTENT.note2.at));
+  head("#note2", when(CONTENT.note2.at) - .1, 16);
+  tl.set({}, {}, D);
+  window.__timelines = window.__timelines || {};
+  window.__timelines["main"] = tl;
+</script>
+</body>
+</html>

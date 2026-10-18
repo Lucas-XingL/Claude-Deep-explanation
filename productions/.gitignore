@@ -13,3 +13,6 @@ audio/
 **/object/*.html
 *.inputs.json
 *.inputs.sha256
+# HyperFrames scratch written next to the clip while it renders
+**/scenes/*/.*.hf-transaction-*/
+**/scenes/*/work-*-*/
