@@ -9,7 +9,7 @@ window.MODEL = (() => {
     fans: 4,                 // -    B  F26  four rear fans
     fanPower: 20000,         // W    C  F14  about 20 kW each
     downforceClaimKg: 2500,  // kgf  C  F10  Moravy: "like 2,500 kilos"
-    downforceScreenKg: 4700, // kgf  B  F11  Electrek's reading of the on-screen figure
+    downforceScreenKg: 4700, // kgf  A  F11  livestream HUD: 4,697 kg while inverted (shown by Tesla, not tested)
     thrustClaim: 80000,      // N    C  F13  "more than 80 kN" (total, peak or average not said)
     massGas: 250,            // kg   C  F15  gas in the Rocket's 600 L
     tankRatedBar: 690,       // bar  C  F12  10,000 psi rating (not the fill pressure)

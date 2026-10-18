@@ -28,7 +28,7 @@ export function make(shot) {
   const k0 = W("L013", "气瓶") - lead; // tanks and feed line light
   const p0 = W("L013", "额定") - lead; // rated pressure readout
   const r0 = W("L013", "三百") - lead; // ≈ 300 × tyre pressure readout
-  const open = 9; // × each panel's explode travel: far enough that every panel leaves the frame
+  const open = 12; // × each panel's SHELL distance (object/film.mjs): far enough that every panel leaves the frame
   return {
     keys: [
       { t: 0, yaw: -143, pitch: 26, roll: 0, zoom: 2.25, focus: "body", panX: 0, panY: -10, apart: 0, wheels: 0, fan: 0, skirt: 0, shell: 0, hiFan: 0, hiSkirt: 0, hiTank: 0, hiNozzle: 0, ground: 1, glow: [0.5, 0.55, 0.75] },
