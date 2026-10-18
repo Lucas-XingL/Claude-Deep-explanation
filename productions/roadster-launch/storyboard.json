@@ -10,7 +10,7 @@
     "answer": "倒挂靠风扇吸力，翻身和飞跃靠几秒钟的冷气推力。离持续飞行还很远，推力和气量都还只是工程师的说法。"
   },
   "assets": {
-    "opening": "官方视频《The Ramp》里车倒挂在坡道顶上的几秒（research/assets.md）；scenes/_shared/opening/ 下的 clip.mp4、last.png、edges.png",
+    "opening": "特斯拉官方直播里车倒挂在坡道顶下方的几秒（经看看新闻在 B 站转载，research/assets.md A01–A04）；scenes/_shared/opening/ 下的 clip.mp4、last.png、edges.png",
     "ramp2d": "纸面风侧视坡道：弯曲坡道和车的侧视贴图（scenes/_shared/car_side.png，从 anatomy 模型抠出），scenes/ramp/",
     "car3d": "anatomy 剖解跑车，104 个零件，风扇、裙边、气瓶、喷口都能动（scenes/_shared/car/）",
     "cards": "HyperFrames 纸面主题信息卡（templates/hyperframes/），scenes/S03/、scenes/S12/",
@@ -30,8 +30,8 @@
       "route": "R7",
       "asset": "opening",
       "source": "scenes/_shared/opening/clip.mp4",
-      "credit": "画面：特斯拉官方视频《The Ramp》，2026-10-16",
-      "visual": "官方视频：车沿弯曲坡道开上去，倒挂在坡道顶上",
+      "credit": "画面：特斯拉官方直播，2026-10-15，经看看新闻转载",
+      "visual": "官方直播画面：远景里车开到弯曲坡道顶端的悬挑段，切到仰拍特写，车倒挂在坡道顶下方",
       "camera": "原片机位，不加推拉",
       "onscreen": [
         "来源署名"
@@ -58,11 +58,14 @@
       "route": "R7",
       "asset": "opening",
       "source": "scenes/S02/index.html",
-      "credit": "画面：特斯拉官方视频《The Ramp》，2026-10-16",
+      "credit": "画面：特斯拉官方直播，2026-10-15，经看看新闻转载",
       "visual": "真实画面定格 → 描出线稿 → 换成纸面风的坡道和我们的车（倒挂），问题出现在空白处",
       "camera": "固定机位，线稿出现时极慢推近",
       "onscreen": [
         "来源署名",
+        "官方画面",
+        "车头朝下",
+        "轮子贴着顶",
         "它为什么掉不下来？"
       ],
       "evidence": [
@@ -229,14 +232,14 @@
       "route": "R3",
       "asset": "underbody",
       "source": "scenes/underbody/index.html",
-      "visual": "接着 S06 的倒挂状态：右侧三根条依次长出——倒挂所需 1,700 kgf、工程师说 2,500 kgf（宣称）、屏幕显示约 4,700 kgf（据报道）；然后车离开坡道顶面往下落，裙边和顶面之间出现缝隙，空气点涌入车底，车底压强回到大气压，吸力箭头缩到零，读数变灰，写“吸力模型不再适用”",
+      "visual": "接着 S06 的倒挂状态：右侧三根条依次长出——倒挂所需 1,700 kgf、工程师说 2,500 kgf（宣称）、屏幕显示约 4,700 kgf（直播画面显示）；然后车离开坡道顶面往下落，裙边和顶面之间出现缝隙，空气点涌入车底，车底压强回到大气压，吸力箭头缩到零，读数变灰，写“吸力模型不再适用”",
       "camera": "固定机位，车往下掉时画面轻微跟随",
       "onscreen": [
         "倒挂所需 1,700",
         "工程师说 2,500",
         "屏幕显示 ≈4,700",
         "宣称",
-        "据报道",
+        "直播画面显示",
         "吸力模型不再适用"
       ],
       "evidence": [

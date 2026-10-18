@@ -1,0 +1,170 @@
+<!doctype html>
+<!--
+  Opening reveal: the real picture turns into a line drawing, and the line drawing into our model.
+  Copy to scenes/<name>/index.html. Inputs come from scripts/footage.sh (last.png, edges.png) and
+  scripts/anatomy/sprite.sh (the object's sprite). See references/footage.md.
+    0 → trace     the real picture, slowly pushing in, with its credit and badge
+    trace → model the picture fades; its lines are drawn on the paper, sweeping left to right
+    model → settle the lines fade under our model, drawn where the subject sits in the picture
+    settle → end  our model alone on the paper: the next shot starts from this frame
+  Set ALIGN by eye: render a still at REVEAL.t.model and move the sprite until it covers the
+  subject (capture_frames.mjs --stills). Images are only drawn, never read back, so file:// works.
+-->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../_shared/paper.css">
+<style>
+  .layer { position: absolute; inset: 0; }
+  #lines { mix-blend-mode: multiply; }
+  .mo-plate { opacity: 0; }
+</style>
+</head>
+<body>
+<div class="mo">
+  <div class="mo-bg"></div>
+  <canvas id="lines" class="layer"></canvas>
+  <canvas id="model" class="layer"></canvas>
+  <canvas id="photo" class="layer"></canvas>
+  <div class="mo-vignette"></div>
+  <div class="mo-plate" id="plate">
+    <span class="mo-corner" data-c="fig">Fig 1</span>
+    <span class="mo-corner" data-c="title">ROADSTER · 坡道倒挂</span>
+    <span class="mo-corner" data-c="hint" id="hint"></span>
+    <span class="mo-corner" data-c="readout" id="readout"></span>
+  </div>
+</div>
+<script>
+// ---- edit these ----------------------------------------------------------------------------------
+const REVEAL = {
+  photo: "../_shared/opening/last.png",
+  edges: "../_shared/opening/edges.png",
+  sprite: "../_shared/car_side.png",         // the anatomy car's side sprite (front on the left)
+  // The car in the photo is upside down under the ramp, tilted ~9.7° down to the right: a vertical
+  // flip (rot 180 + mirror) plus the tilt. Width from the wheelbase (986 px between wheel centres).
+  align: { x: 1152, y: 518, w: 1555, rot: 189.7, flip: true },
+  credit: "画面：特斯拉官方直播，2026-10-15，经看看新闻转载",
+  badge: "官方画面",
+  push: 0.04,
+  t: { trace: 0.14, model: 0.42, settle: 0.62 },
+  hint: "示意", readout: "倒挂 · 车上无人",
+};
+// --------------------------------------------------------------------------------------------------
+const SCENE = window.SCENE || { width: 1920, height: 1080, fps: 30, duration: 6 };
+const SHOT = window.SHOT || { id: "preview", duration: 6, lines: [] };
+const DURATION = SHOT.duration || SCENE.duration;
+const W = SCENE.width, H = SCENE.height, U = Math.min(W, H) / 1080;
+document.documentElement.style.setProperty("--mo-w", W + "px");
+document.documentElement.style.setProperty("--mo-h", H + "px");
+const ctx = (id) => { const c = document.getElementById(id); c.width = W; c.height = H; return c.getContext("2d"); };
+const gl = ctx("lines"), gm = ctx("model"), gp = ctx("photo");
+const FONT = '"Noto Sans CJK SC","Source Han Sans SC","PingFang SC","Microsoft YaHei","WenQuanYi Zen Hei",sans-serif';
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eio = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+const load = (src) => new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+let photo, edges, sprite;
+window.sceneReady = Promise.all([document.fonts.ready, load(REVEAL.photo), load(REVEAL.edges), load(REVEAL.sprite)])
+  .then(([, p, e, s]) => { photo = p; edges = e; sprite = s; });
+
+// The same slow push-in for the picture, its lines and the model, so all three stay registered.
+function camera(g, t) {
+  const k = 1 + REVEAL.push * eio(clamp(t / DURATION)), { x, y } = REVEAL.align;
+  g.setTransform(k, 0, 0, k, x - k * x, y - k * y);
+}
+// A label that sits on a dark box over the picture and turns into ink on the paper as the picture
+// fades (k = how far the picture has faded), so the credit stays readable while the lines are shown.
+function label(g, s, x, y, size, box, k, alpha) {
+  if (alpha <= 0) return;
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = alpha; g.font = `500 ${size * U}px ${FONT}`; g.textBaseline = "middle";
+  const w = g.measureText(s).width, pad = size * 0.45 * U;
+  g.fillStyle = `rgba(${box},${0.8 * (1 - k)})`; g.fillRect(x - pad, y - size * 0.75 * U, w + 2 * pad, size * 1.5 * U);
+  const c = Math.round(255 - (255 - 43) * k);
+  g.fillStyle = `rgb(${c},${Math.round(255 - (255 - 41) * k)},${Math.round(255 - (255 - 37) * k)})`; g.fillText(s, x, y); g.restore();
+}
+
+// When a phrase is spoken (word timings from the timeline), as atWord in the other scenes.
+const SKIP = /[\s，。！？；：、,.!?;:“”"'（）()《》—…·-]/g;
+function wordAt(id, phrase) {
+  const l = (SHOT.lines || []).find((x) => x.id === id); if (!l) return 0;
+  const p = phrase.replace(SKIP, "");
+  if (l.words && l.words.length) {
+    let s = ""; const at = [];
+    for (const w of l.words) { const cs = [...w.text.replace(SKIP, "")]; cs.forEach((c, k) => { s += c; at.push(w.start + (w.end - w.start) * k / cs.length); }); }
+    const k = s.indexOf(p); if (k >= 0) return at[[...s.slice(0, k)].length];
+  }
+  const txt = (l.text || "").replace(SKIP, ""), k = txt.indexOf(p);
+  return k < 0 ? l.start : l.start + (l.end - l.start) * [...txt.slice(0, k)].length / Math.max(1, [...txt].length);
+}
+const INK = "43,41,37";
+// The ramp drawn on the paper along the surface the wheels touch in the photo (y = 227 at x = 674,
+// slope 0.149), with a band above it and a few truss lines, like the anatomy plates.
+function ramp(g, t, a) {
+  if (a <= 0) return;
+  const y = (x) => 227 + (x - 674) * 0.149;
+  camera(g, t); g.save(); g.globalAlpha = a;
+  g.fillStyle = "rgba(236,229,214,0.92)"; g.strokeStyle = `rgb(${INK})`; g.lineWidth = 3;
+  g.beginPath(); g.moveTo(-100, y(-100)); g.lineTo(2020, y(2020)); g.lineTo(2020, y(2020) - 90); g.lineTo(-100, y(-100) - 90); g.closePath(); g.fill(); g.stroke();
+  g.lineWidth = 1.5; g.strokeStyle = `rgba(${INK},0.45)`;
+  for (let x = -60; x < 2020; x += 120) { g.beginPath(); g.moveTo(x, y(x) - 90); g.lineTo(x + 60, y(x + 60)); g.lineTo(x + 120, y(x + 120) - 90); g.stroke(); }
+  g.restore();
+}
+function inkLabel(g, s, x, y, size, a, lead) {
+  if (a <= 0) return;
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = a; g.font = `600 ${size * U}px ${FONT}`; g.textBaseline = "middle";
+  g.fillStyle = `rgb(${INK})`; g.fillText(s, x, y);
+  if (lead) { g.strokeStyle = `rgba(${INK},0.7)`; g.lineWidth = 2; g.beginPath(); g.moveTo(lead[0], lead[1]); g.lineTo(lead[2], lead[3]); g.stroke();
+    g.beginPath(); g.arc(lead[2], lead[3], 5, 0, Math.PI * 2); g.fillStyle = `rgb(${INK})`; g.fill(); }
+  g.restore();
+}
+
+function draw(t) {
+  const d = DURATION, T = REVEAL.t;
+  const fadePhoto = eio(seg(t, T.trace * d, T.model * d));
+  const sweep = eio(seg(t, T.trace * d, T.model * d));
+  const linesOut = eio(seg(t, T.model * d, T.settle * d));
+  const modelIn = eio(seg(t, T.model * d, T.settle * d));
+  for (const g of [gl, gm, gp]) { g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); }
+
+  // The real picture, on top until it fades.
+  if (photo && fadePhoto < 1) {
+    camera(gp, t); gp.globalAlpha = 1 - fadePhoto; gp.drawImage(photo, 0, 0, W, H); gp.globalAlpha = 1;
+  }
+  // Credit and badge stay while the picture or its lines are on screen (the lines are its likeness).
+  const gt = fadePhoto < 1 ? gp : gm;
+  if (REVEAL.credit) label(gt, REVEAL.credit, W * 0.035, H * 0.06, 26, "0,0,0", fadePhoto, 1 - linesOut);
+  if (REVEAL.badge) label(gt, REVEAL.badge, W * 0.035, H * 0.06 + 52 * U, 24, "217,86,47", fadePhoto, 1 - linesOut);
+  // Its lines, drawn on the paper with a left-to-right sweep (multiply: white disappears).
+  if (edges && sweep > 0 && linesOut < 1) {
+    camera(gl, t); gl.save(); gl.beginPath(); gl.rect(0, 0, W * sweep / (1 - REVEAL.push * 0.5), H); gl.clip();
+    gl.globalAlpha = 1 - 0.85 * linesOut; gl.drawImage(edges, 0, 0, W, H); gl.restore();
+  }
+  // Our model, where the subject was.
+  if (sprite && modelIn > 0) {
+    const { x, y, w, rot, flip } = REVEAL.align, h = (w * sprite.naturalHeight) / sprite.naturalWidth;
+    camera(gm, t); gm.translate(x, y); gm.rotate((rot * Math.PI) / 180); gm.scale(flip ? -1 : 1, 1);
+    gm.globalAlpha = modelIn; gm.drawImage(sprite, -w / 2, -h / 2, w, h); gm.globalAlpha = 1;
+  }
+  // On the paper: the ramp, the two things the line names, then the question.
+  ramp(gl, t, modelIn);
+  const fade = (t0) => eio(seg(t, t0, t0 + 0.4)) * modelIn;
+  inkLabel(gm, "车头朝下", 150, 610, 34, fade(Math.max(wordAt("L002", "车头朝下"), T.settle * d - 0.6)), [300, 590, 400, 470]);
+  inkLabel(gm, "轮子贴着顶", 1180, 120, 34, fade(Math.max(wordAt("L002", "轮子贴着顶"), T.settle * d - 0.4)), [1370, 140, 1600, 360]);
+  const q = eio(seg(t, wordAt("L002", "它为什么") - 0.1, wordAt("L002", "它为什么") + 0.5));
+  if (q > 0) {
+    gm.save(); gm.setTransform(1, 0, 0, 1, 0, 0); gm.globalAlpha = q; gm.fillStyle = `rgb(${INK})`;
+    gm.font = `700 ${72 * U}px ${FONT}`; gm.textBaseline = "alphabetic";
+    gm.fillText("它为什么掉不下来？", 150, 840 - 18 * (1 - q)); gm.restore();
+  }
+  document.getElementById("plate").style.opacity = String(modelIn);
+  document.getElementById("hint").textContent = REVEAL.hint;
+  document.getElementById("readout").textContent = REVEAL.readout;
+}
+
+window.renderFrame = (t) => draw(t);
+if (!window.__seek) {
+  window.sceneReady.then(() => { const t0 = performance.now(); const loop = () => { draw(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); }; requestAnimationFrame(loop); });
+} else window.sceneReady.then(() => draw(0));
+</script>
+</body>
+</html>
