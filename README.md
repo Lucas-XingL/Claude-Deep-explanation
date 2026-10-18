@@ -1,4 +1,4 @@
-# explainer-video：用代码动画做科普讲解视频的 skill
+# explainer-video：用编程动画（代码动画）做科普讲解视频的 skill
 
 一个通用的 agent skill：把一个选题做成有配音、字幕和动画的**科普讲解视频或短纪录片（MP4）**。
 
