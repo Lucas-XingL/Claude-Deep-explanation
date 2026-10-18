@@ -107,11 +107,12 @@ function tank(t, gas, k) {
   g.save(); g.clip(p); g.strokeStyle = "rgba(29,28,26,.08)"; g.lineWidth = 2;              // carbon-fibre wrap
   for (let d = -400; d < 600; d += 22) { g.beginPath(); g.moveTo(TK.x - 200 + d, TK.top - 20); g.lineTo(TK.x + 200 + d, TK.top + 380); g.stroke(); g.beginPath(); g.moveTo(TK.x + 200 - d, TK.top - 20); g.lineTo(TK.x - 200 - d, TK.top + 380); g.stroke(); }
   const n = Math.round(gas);
-  g.fillStyle = BLUE;
+  g.fillStyle = BLUE; g.beginPath();                              // one path: many small GPU paths are not bit-stable across seeks
   for (let i = 0; i < n && i < DOTS.length; i++) {
-    const [x, y, ph] = DOTS[i];
-    g.beginPath(); g.arc(x + 2.2 * Math.sin(t * 2.3 + ph * 40), y + 2.2 * Math.cos(t * 1.9 + ph * 31), 6, 0, Math.PI * 2); g.fill();
+    const [x, y, ph] = DOTS[i], cx = x + 2.2 * Math.sin(t * 2.3 + ph * 40), cy = y + 2.2 * Math.cos(t * 1.9 + ph * 31);
+    g.moveTo(cx + 6, cy); g.arc(cx, cy, 6, 0, Math.PI * 2);
   }
+  g.fill();
   g.restore();
   g.strokeStyle = INK; g.lineWidth = 3; g.stroke(p);
   g.fillStyle = "#c9b98f"; g.fillRect(TK.x - 18, TK.top - 26, 36, 26); g.strokeRect(TK.x - 18, TK.top - 26, 36, 26);   // valve
