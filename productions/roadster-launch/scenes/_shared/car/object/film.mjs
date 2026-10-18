@@ -63,7 +63,7 @@ const HIGHLIGHT = { hiFan: /^fan\.\d\./, hiSkirt: /^skirt\./, hiTank: /^(tank|fe
 const PLATE_CSS = `.mo .mo-corner[data-c="hint"],.mo .mo-corner[data-c="readout"]{top:34px;bottom:auto;font-family:"Noto Sans CJK SC","Source Han Sans SC","PingFang SC","WenQuanYi Zen Hei",sans-serif;font-size:15px;line-height:1.55;letter-spacing:.02em;text-transform:none;white-space:pre;color:rgba(29,28,26,.88);background:rgba(244,241,234,.82);padding:3px 7px}
 .mo .mo-corner[data-c="hint"]{left:8px}.mo .mo-corner[data-c="readout"]{right:8px;text-align:right}.mo .mo-corner:empty{display:none}
 .mo [data-hl] [data-r^="plane"] path:not(.iso-line){fill:#ec7067!important;stroke:#5e0f0c!important}.mo [data-hl] [data-r^="plane"] circle{fill:#7a1a1c!important}
-.mo .mo-big{position:absolute;left:58px;top:51%;font-family:ui-monospace,"SF Mono",Menlo,Consolas,"WenQuanYi Zen Hei",monospace;font-size:36px;line-height:1.42;letter-spacing:.08em;color:#1D1C1A;white-space:pre;pointer-events:none}`;
+.mo .mo-big{position:absolute;left:48px;top:42%;font-family:ui-monospace,"SF Mono",Menlo,Consolas,"WenQuanYi Zen Hei",monospace;font-size:34px;line-height:1.42;letter-spacing:.04em;color:#1D1C1A;white-space:pre;pointer-events:none}`;
 let LOOK = null;
 function dress(s) {
   const root = document.querySelector(".mo");

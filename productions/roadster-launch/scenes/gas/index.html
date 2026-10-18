@@ -88,7 +88,7 @@ function badge(label, x, y, color, alpha = 1) {
 }
 
 // ---- left: the tank, one dot per kilogram ----
-const TK = { x: 330, top: 250, bot: 680, r: 95 };
+const TK = { x: 330, top: 240, bot: 700, r: 100 };
 const tankPath = () => { const p = new Path2D(); p.roundRect(TK.x - TK.r, TK.top, 2 * TK.r, TK.bot - TK.top, TK.r); return p; };
 const DOTS = (() => {                                            // fixed positions inside the capsule
   const out = []; let i = 0;
@@ -119,7 +119,7 @@ function tank(t, gas, k) {
 }
 
 // ---- right: the car on its down nozzles, and the timer ----
-const GY = 640, CAR_W = 420, K = CAR_W / SP.w, PXM = CAR_W / SP.len, CAR_X = 1480;
+const GY = 640, CAR_W = 480, K = CAR_W / SP.w, PXM = CAR_W / SP.len, CAR_X = 1490;
 const AX = { x0: 1180, y: 772, pxs: 50, max: 12 };              // time axis, px per second
 function carHeight(tau, t) {                                     // CG height above the wheels-on-ground state (m)
   if (t <= T0) return 0;
@@ -136,16 +136,16 @@ function draw(t) {
   // left: tank
   const kTank = atWord(t, "L018", "可气");
   tank(t, gas, kTank);
-  text("车上气瓶", TK.x, 170, 32, { align: "center", alpha: kTank });
+  text("车上气瓶", TK.x, 136, 32, { align: "center", alpha: kTank });
   const k250 = atWord(t, "L019", "二百五十");
   const w250 = measure(`约 ${M.massGas} kg`, 30);
-  text(`约 ${M.massGas} kg`, TK.x - 40, 212, 30, { align: "center", alpha: k250 });
-  badge("宣称", TK.x - 40 + w250 / 2 + 12, 212, ACCENT, k250);
-  text(`剩 ${Math.round(gas)} kg`, TK.x, 738, 44, { align: "center", font: MONO, weight: 700, color: running || t > TE ? BLUE : INK, alpha: k250 });
-  text("1 点 = 1 kg", TK.x, 792, 24, { align: "center", color: SOFT, weight: 500, alpha: k250 });
+  text(`约 ${M.massGas} kg`, TK.x - 40, 184, 30, { align: "center", alpha: k250 });
+  badge("宣称", TK.x - 40 + w250 / 2 + 12, 184, ACCENT, k250);
+  text(`剩 ${Math.round(gas)} kg`, TK.x, 762, 44, { align: "center", font: MONO, weight: 700, color: running || t > TE ? BLUE : INK, alpha: k250 });
+  text("1 点 = 1 kg", TK.x, 814, 24, { align: "center", color: SOFT, weight: 500, alpha: k250 });
 
   // middle: the account
-  const MX = 620;
+  const MX = 640;
   const kIsp = atWord(t, "L018", "算下来");
   const bw = badge("估算", MX, 248, BLUE, kIsp);
   text(`按比冲 ${M.isp} s`, MX + bw + 12, 248, 26, { color: BLUE, weight: 500, alpha: kIsp });
@@ -177,12 +177,12 @@ function draw(t) {
   }
   if (carImg.complete) drawCar(g, carImg, P, { alpha: kCar });
   const C = toScreen(P, SP.cg), kOn = clamp((t - T0) / 0.06) * (1 - clamp((t - TE) / 0.06));
-  const Lw = 84 * Wnow / W0;                                     // weight arrow; thrust arrows sum to the same
-  arrow(g, C[0], C[1] + 16, C[0], C[1] + 16 + Lw, INK, 7, kHov, 24);
-  for (const pt of [SP.downF, SP.downR]) { const E = toScreen(P, pt); arrow(g, E[0], E[1], E[0], E[1] - (st.thrust / W0) * 84 / 2 * (t < TE ? 1 : 0), ACCENT, 7, kOn, 22); }
+  const Lw = 110 * Wnow / W0;                                     // weight arrow; thrust arrows sum to the same
+  arrow(g, C[0], C[1] + 16, C[0], C[1] + 16 + Lw, INK, 7, kHov * (1 - seg(t, TE + 0.35, TE + 0.7)), 24);   // hover balance only
+  for (const pt of [SP.downF, SP.downR]) { const E = toScreen(P, pt); arrow(g, E[0], E[1], E[0], E[1] - (st.thrust / W0) * 110 / 2 * (t < TE ? 1 : 0), ACCENT, 7, kOn, 22); }
   cgMark(g, C[0], C[1], 11, kHov);
-  text("推力 = 重力", CAR_X, 400, 30, { align: "center", color: ACCENT, weight: 700, alpha: kHov * (1 - seg(t, TE, TE + 0.3)) });
-  text("气用完，落地", CAR_X, 400, 30, { align: "center", weight: 700, alpha: seg(t, TE + 0.15, TE + 0.45) });
+  text("推力 = 重力", CAR_X, 378, 30, { align: "center", color: ACCENT, weight: 700, alpha: kHov * (1 - seg(t, TE, TE + 0.3)) });
+  text("气用完，落地", CAR_X, 378, 30, { align: "center", weight: 700, alpha: seg(t, TE + 0.15, TE + 0.45) });
 
   // timer
   const kAx = kHov;
