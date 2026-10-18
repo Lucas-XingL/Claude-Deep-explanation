@@ -1,17 +1,17 @@
 // Motion of the car in the thrust figure (S09 and S10), as pure functions of the shot time t.
 // World units are metres, x to the right, y up from the ground. Every time comes from the words
 // of the narration (SHOT.lines[].words), so a new voice track moves the action with it.
-//   S09: falling off the ramp upside down. The rear valve opens and the rear nozzle (its axis
-//        passes through the CG) pushes the car forward; then a rear down nozzle, whose axis
-//        misses the CG, spins it half a turn about the CG; a front down nozzle stops the spin;
-//        it lands on its wheels. 示意: times and sizes are not to scale.
+//   S09: falling off the ramp upside down. The rear valve opens and the tail nozzle (its axis
+//        passes through the CG) pushes the car forward; then the rear down nozzle, whose axis
+//        misses the CG, fires from "喷口" to "转" and spins it about the CG; a front down nozzle
+//        stops the spin at half a turn; it lands on its wheels. 示意: times and sizes not to scale.
 //   S10: the four down nozzles (two seen from the side, either side of the CG so the car does not
 //        turn) lift the car while it drives forward; it flies over five vehicles and lands.
 // Both shots meet at X_LAND, the car at rest on its wheels.
 (function (root) {
   const SP = root.CAR2D.SP;
   const SKIP = /[\s，。！？；：、,.!?;:“”"'（）()《》—…·-]/g;
-  const X_LAND = -2.85;                   // m, where S09 ends and S10 starts
+  const X_LAND = -1.2;                    // m, where S09 ends and S10 starts
   const NOSE = SP.cg[0] / SP.pxm, TAIL = (SP.w - SP.cg[0]) / SP.pxm;   // m ahead of / behind the CG
 
   function timing(SHOT) {
@@ -34,12 +34,14 @@
   function makeS09(T) {
     const L14 = T.line("L014"), L15 = T.line("L015");
     const tOpen = T.wordAt("L014", "开"), tOff = L14.end;          // rear valve
-    const tSpin = T.wordAt("L015", "车身");                         // rear down nozzle fires
+    const tSpin = T.wordAt("L015", "喷口");                         // rear down nozzle fires …
+    const tSpinOff = T.wordAt("L015", "转") + 0.1;                  // … until the car is turning
     const tStop = T.wordAt("L015", "翻身") + 0.2;                   // spin stopped: upright
-    const d = 0.75, coast = tStop - tSpin - 2 * d;                  // burst, coast, counter-burst
-    const alpha = Math.PI / (d * (d + coast));                      // rad/s² (示意 time)
+    const d = tSpinOff - tSpin, d2 = 1.0, coast = tStop - d2 - tSpinOff;   // burst, coast, counter-burst
+    const alpha = Math.PI / (d * (d / 2 + coast + d2 / 2));         // rad/s² during the burst (示意 time)
+    const w1 = alpha * d, alpha2 = w1 / d2;                         // counter-burst brings the spin to 0
     const tLand = T.wordAt("L015", "翻身") + 0.95;
-    const y0 = 4.4, DX = 4.0;                                       // CG height at t=0; drift before landing
+    const y0 = 4.0, DX = 2.3;                                       // CG height at t=0; drift before landing
     const Tb = tOff - tOpen, a = DX / (0.5 * Tb * Tb + Tb * (tLand - tOff)), vLand = a * Tb;
     const slideT = 0.35, slide = vLand * slideT / 2;
     const X0 = X_LAND + DX + slide;
@@ -47,8 +49,8 @@
       const u = t - tSpin;
       if (u <= 0) return 0;
       if (u < d) return 0.5 * alpha * u * u;
-      if (u < d + coast) return 0.5 * alpha * d * d + alpha * d * (u - d);
-      if (u < 2 * d + coast) { const w = u - d - coast; return 0.5 * alpha * d * d + alpha * d * coast + alpha * d * w - 0.5 * alpha * w * w; }
+      if (u < d + coast) return 0.5 * alpha * d * d + w1 * (u - d);
+      if (u < d + coast + d2) { const w = u - d - coast; return 0.5 * alpha * d * d + w1 * coast + w1 * w - 0.5 * alpha2 * w * w; }
       return Math.PI;
     };
     const pose = (t) => {
@@ -62,10 +64,10 @@
     };
     const jets = [
       { name: "rear", pt: SP.rearExit, dir: [1, 0], on: tOpen, off: tOff },
-      { name: "downR", pt: SP.downR, dir: [0, 1], on: tSpin, off: tSpin + d },
-      { name: "downF", pt: SP.downF, dir: [0, 1], on: tStop - d, off: tStop },
+      { name: "downR", pt: SP.downR, dir: [0, 1], on: tSpin, off: tSpinOff },
+      { name: "downF", pt: SP.downF, dir: [0, 1], on: tStop - d2, off: tStop },
     ];
-    return { pose, jets, tOpen, tOff, tSpin, tStop, tLand, d, theta };
+    return { pose, jets, tOpen, tOff, tSpin, tSpinOff, tStop, tLand, d, d2, theta };
   }
 
   // ---------------------------------------------------------------- S10: lift-off and the jump

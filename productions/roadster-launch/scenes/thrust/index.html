@@ -57,18 +57,19 @@ const atWord = (t, id, phrase, len = 0.5, lead = 0.08) => { const w = T.wordAt(i
 const onOff = (t, a, b, f = 0.06) => seg(t, a, a + f) * (1 - seg(t, b, b + f));   // jets and their arrows
 
 // ---- world → screen (design px, 1920×1080) ----
-const S = 120, YG = 860, CX = 960, K = S / SP.pxm;     // px per metre; ground line; px per sprite px
-const smax0 = (z, w) => (z <= -w ? 0 : z >= w ? z : (z + w) * (z + w) / (4 * w));
-function camX(t) {
-  if (!IS10) return 0;
-  const end = B.pose(DURATION + 5).x - 3.5;                      // stop with the car right of centre
-  const c = smax0(B.pose(t).x - 2.4, 1.5);                       // follow once the car passes 2.4 m (screen x ≈ 1250)
-  return end - smax0(end - c, 1.5);
+const YG = 860, CX = 960;                               // ground line, screen centre
+const S0 = 158, S1 = 110;                               // px per metre: S09 (car ≈ 700 px long); S10 after the pull-back
+const SX0 = CX + MO.X_LAND * S0;                        // where S09 leaves the car (screen x)
+function viewAt(t) {                                    // {S: px per metre, cx: world x at the screen centre}
+  if (!IS10) return { S: S0, cx: 0 };
+  const S = S0 + (S1 - S0) * eio(seg(t, 0.5, 3.4));     // pull back to make room for the jump
+  const sx = SX0 + (1250 - SX0) * eio(seg(t, B.tGo, B.tFire + 1.0)) + 130 * eio(seg(t, B.tLand, B.tLand + 1.0));   // car on screen
+  return { S, cx: B.pose(t).x - (sx - CX) / S };        // the camera pans with the car
 }
-const scr = (x, y, cx) => [CX + (x - cx) * S, YG - y * S];
+const scr = (x, y, V) => [CX + (x - V.cx) * V.S, YG - y * V.S];
 function carPose(t) {
-  const p = IS10 ? B.pose(t) : A.pose(t), cx = camX(t), [X, Y] = scr(p.x, p.y, cx);
-  return { ...p, X, Y, k: K, mirror: true, cx };
+  const p = IS10 ? B.pose(t) : A.pose(t), V = viewAt(t), [X, Y] = scr(p.x, p.y, V);
+  return { ...p, X, Y, k: V.S / SP.pxm, mirror: true, V };
 }
 
 // ---- drawing helpers ----
@@ -94,19 +95,21 @@ function dashed(x0, y0, x1, y1, color, width, alpha, dash = [14, 10]) {
 }
 function leader(x0, y0, x1, y1, alpha) { dashed(x0, y0, x1, y1, SOFT, 2, alpha * 0.9, [4, 5]); }
 
-function ground(cx) {
+function ground(V) {
   g.save(); g.strokeStyle = INK; g.lineWidth = 2.5;
   g.beginPath(); g.moveTo(40, YG); g.lineTo(1880, YG); g.stroke();
   g.strokeStyle = SOFT; g.lineWidth = 1.4;                        // hatch fixed to the ground (a reference)
-  const x0 = Math.floor((cx - 9) / 0.25) * 0.25;
-  for (let x = x0; x < cx + 9; x += 0.25) { const X = CX + (x - cx) * S; if (X < 50 || X > 1875) continue; g.beginPath(); g.moveTo(X, YG); g.lineTo(X - 12, YG + 14); g.stroke(); }
+  const half = CX / V.S + 1, x0 = Math.floor((V.cx - half) / 0.25) * 0.25;
+  g.beginPath();                                                   // one path: per-stroke GPU caching made seeks differ
+  for (let x = x0; x < V.cx + half; x += 0.25) { const X = CX + (x - V.cx) * V.S; if (X < 50 || X > 1875) continue; g.moveTo(X, YG); g.lineTo(X - 12, YG + 14); }
+  g.stroke();
   g.restore();
 }
 function trail(from, to, poseAt, alpha) {                         // dotted path of the CG
   if (alpha <= 0 || to <= from) return;
   g.save(); g.globalAlpha = alpha; g.fillStyle = SOFT;
-  const cx = camX(to);
-  for (let s = from; s <= to; s += 0.025) { const p = IS10 ? B.pose(s) : A.pose(s), [X, Y] = scr(p.x, p.y, cx); g.beginPath(); g.arc(X, Y, 2.4, 0, Math.PI * 2); g.fill(); }
+  const V = viewAt(to);
+  for (let s = from; s <= to; s += 0.025) { const p = IS10 ? B.pose(s) : A.pose(s), [X, Y] = scr(p.x, p.y, V); g.beginPath(); g.arc(X, Y, 2.4, 0, Math.PI * 2); g.fill(); }
   g.restore();
 }
 function valve(P, open, alpha) {                                   // valve symbol on the rear line
@@ -122,7 +125,7 @@ function valve(P, open, alpha) {                                   // valve symb
 function ring(x, y, r, alpha) { if (alpha <= 0) return; g.save(); g.globalAlpha = alpha; g.strokeStyle = ACCENT; g.lineWidth = 3; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke(); g.restore(); }
 function turnArrow(x, y, sweep, alpha) {                          // clockwise turn about the CG
   if (alpha <= 0 || sweep <= 0) return;
-  const r = 58, a0 = -Math.PI * 0.95, a1 = a0 + sweep * Math.PI * 1.45;
+  const r = 72, a0 = -Math.PI * 0.95, a1 = a0 + sweep * Math.PI * 1.45;
   g.save(); g.globalAlpha = alpha; g.lineCap = "round";
   for (const [c, w] of [["rgba(244,241,234,.9)", 11], [INK, 5]]) { g.strokeStyle = c; g.lineWidth = w; g.beginPath(); g.arc(x, y, r, a0, a1); g.stroke(); }
   const hx = x + r * Math.cos(a1), hy = y + r * Math.sin(a1), ta = a1 + Math.PI / 2;
@@ -135,8 +138,8 @@ function turnArrow(x, y, sweep, alpha) {                          // clockwise t
 function jetsAndThrust(t, P, list, arrowLen, opts = {}) {
   for (const j of list) {
     const E = toScreen(P, j.pt), u = dirToScreen(P, j.dir);
-    const len = j.name === "rear" ? 330 : 230;
-    jet(g, E, u, { t, on: j.on, off: j.off, len, w0: 22, seed: j.name.length * 17.3, U: 1, groundY: YG });
+    const sc = P.V.S / S0, len = (j.name === "rear" ? 360 : 270) * sc;
+    jet(g, E, u, { t, on: j.on, off: j.off, len, w0: 26 * sc, seed: j.name.length * 17.3, U: sc, groundY: YG });
   }
   return (t2) => {                                                // arrows drawn after the car
     for (const j of list) {
@@ -151,13 +154,14 @@ function jetsAndThrust(t, P, list, arrowLen, opts = {}) {
 function s09Geometry(P, al) {
   const C = toScreen(P, SP.cg), N = toScreen(P, SP.downR), u = dirToScreen(P, [0, 1]);
   const foot = toScreen(P, [SP.downR[0], SP.cg[1]]);
+  let n = [-u[1], u[0]]; if ((C[0] - N[0]) * n[0] + (C[1] - N[1]) * n[1] > 0) n = [-n[0], -n[1]];   // side away from the CG
   if (al.axis > 0) {                                               // line of action of the rear down nozzle
-    const L0 = 330 * al.axisGrow, L1 = 260 * al.axisGrow;
+    const L0 = 400 * al.axisGrow, L1 = 330 * al.axisGrow;
     let x0 = N[0] - u[0] * L0, y0 = N[1] - u[1] * L0, x1 = N[0] + u[0] * L1, y1 = N[1] + u[1] * L1;
     const clipY = (xa, ya, xb, yb) => { if (yb <= YG - 4) return [xb, yb]; const f = (YG - 4 - ya) / (yb - ya); return [xa + (xb - xa) * f, YG - 4]; };
     [x0, y0] = clipY(N[0], N[1], x0, y0); [x1, y1] = clipY(N[0], N[1], x1, y1);
     dashed(x0, y0, x1, y1, ACCENT, 3, al.axis * 0.85);
-    text("作用线", x0 + 14, y0 + (y0 < N[1] ? 24 : -24), 26, { color: ACCENT, alpha: al.axisLbl });
+    text("作用线", x0 + n[0] * 30, y0 + n[1] * 30 + (y0 < N[1] ? 28 : -28), 28, { color: ACCENT, alpha: al.axisLbl, align: n[0] < 0 ? "right" : "left" });
   }
   if (al.arm > 0) {                                                // the arm: CG ⟂ line of action (示意)
     const n = [u[0] * 16, u[1] * 16];
@@ -166,13 +170,14 @@ function s09Geometry(P, al) {
     for (const Q of [C, foot]) { g.beginPath(); g.moveTo(Q[0] - n[0], Q[1] - n[1]); g.lineTo(Q[0] + n[0], Q[1] + n[1]); g.stroke(); }
     g.restore();
     // label on the roof side of the car (below it upside down, above it upright)
-    const roof = dirToScreen(P, [0, -1]), mx = (C[0] + foot[0]) / 2 + roof[0] * 118, my = (C[1] + foot[1]) / 2 + roof[1] * 118;
+    const roof = dirToScreen(P, [0, -1]), mx = (C[0] + foot[0]) / 2 + roof[0] * 150, my = (C[1] + foot[1]) / 2 + roof[1] * 150;
     text("力臂", mx - 64, my, 30, { alpha: al.armLbl });
     badge("示意", mx + 6, my, SOFT, al.armLbl);
   }
-  cgMark(g, C[0], C[1], 14, al.cg);
-  leader(C[0] + 4, C[1] - 104, C[0] + 1, C[1] - 20, al.cgLbl);
-  text("重心", C[0] + 14, C[1] - 124, 30, { alpha: al.cgLbl });
+  cgMark(g, C[0], C[1], 16, al.cg);
+  leader(C[0] + 4, C[1] - 118, C[0] + 1, C[1] - 22, al.cgLbl);
+  text("重心", C[0] + 16, C[1] - 140, 30, { alpha: al.cgLbl });
+  return n;
   turnArrow(C[0], C[1], al.turn, al.turnA);
 }
 const END09 = { axis: 0.75, axisGrow: 1, axisLbl: 0, arm: 1, armGrow: 1, armLbl: 1, cg: 1, cgLbl: 1, turn: 1, turnA: 1 };
@@ -180,25 +185,23 @@ const END09 = { axis: 0.75, axisGrow: 1, axisLbl: 0, arm: 1, armGrow: 1, armLbl:
 // ---------------------------------------------------------------- S09
 function drawS09(t) {
   const P = carPose(t), L15 = T.line("L015");
-  ground(0);
-  const after = jetsAndThrust(t, P, A.jets, (j) => (j.name === "rear" ? 240 : 150));
+  ground(P.V);
+  const after = jetsAndThrust(t, P, A.jets, (j) => (j.name === "rear" ? 280 : j.name === "downR" ? 200 : 280));
   drawCar(g, carImg, P);
   // L014: valve, gas, thrust
   const kValve = atWord(t, "L014", "阀门") * (1 - seg(t, A.tOff + 0.6, A.tOff + 1.2));
   const open = eo(seg(t, A.tOpen - 0.05, A.tOpen + 0.15)) * (1 - seg(t, A.tOff, A.tOff + 0.2));
   const V = toScreen(P, SP.rearValve), E = toScreen(P, SP.rearExit);
-  leader(V[0], V[1] - 60, V[0], V[1] - 22, kValve); text("阀门", V[0], V[1] - 84, 30, { align: "center", alpha: kValve });
+  leader(V[0], V[1] - 76, V[0], V[1] - 26, kValve); text("阀门", V[0], V[1] - 100, 30, { align: "center", alpha: kValve });
   const kGas = atWord(t, "L014", "气体") * (1 - seg(t, A.tOff, A.tOff + 0.5));
-  text("高速气体", E[0] + 120, E[1] - 74, 30, { color: BLUE, alpha: kGas });
+  text("高速气体", E[0] + 150, E[1] - 92, 30, { color: BLUE, alpha: kGas });
   const kPush = atWord(t, "L014", "反方向") * (1 - seg(t, A.tOff, A.tOff + 0.3));
-  text("推力", E[0] - 150, E[1] + 112, 34, { color: ACCENT, weight: 700, alpha: kPush });
-  leader(E[0] - 120, E[1] + 88, E[0] - 120, E[1] + 16, kPush);
+  text("推力", E[0] - 200, E[1] + 152, 34, { color: ACCENT, weight: 700, alpha: kPush });
+  leader(E[0] - 170, E[1] + 126, E[0] - 170, E[1] + 14, kPush);
   // L015: nozzle, line of action, CG, arm, turn
-  const N = toScreen(P, SP.downR);
   const kNoz = atWord(t, "L015", "喷口");
-  ring(N[0], N[1] - 6, 26, kNoz * (1 - seg(t, A.tSpin + A.d, A.tSpin + A.d + 0.6)));
-  const kNozL = kNoz * (1 - seg(t, A.tSpin + 0.6, A.tSpin + 1.1));
-  text("喷口", N[0] + 40, N[1] - 50, 30, { alpha: kNozL });
+  const NB = toScreen(P, [SP.downR[0], SP.downR[1] - 20]);          // middle of the bell
+  ring(NB[0], NB[1], 30, kNoz * (1 - seg(t, A.tSpinOff, A.tSpinOff + 0.5)));
   const wCG = T.wordAt("L015", "重心");
   const rest = 1 - seg(t, A.tSpin + 0.25, A.tSpin + 0.55) + seg(t, A.tStop, A.tStop + 0.4);   // labels rest while it turns
   const al = {
@@ -208,12 +211,14 @@ function drawS09(t) {
     arm: seg(t, wCG + 0.3, wCG + 0.5), armGrow: eio(seg(t, wCG + 0.3, wCG + 0.8)), armLbl: eo(seg(t, wCG + 0.6, wCG + 1.0)) * rest,
     turn: eio(seg(t, T.wordAt("L015", "转") - 0.1, T.wordAt("L015", "转") + 0.7)), turnA: 1,
   };
-  s09Geometry(P, al);
+  const nAway = s09Geometry(P, al);
   after(t);
   valve(P, open, kValve);
+  const kNozL = kNoz * (1 - seg(t, A.tSpinOff - 0.3, A.tSpinOff + 0.2));
+  text("车尾下喷口", NB[0] + nAway[0] * 52, NB[1] + nAway[1] * 52, 30, { alpha: kNozL, align: nAway[0] < 0 ? "right" : "left" });
   // the stop: a short burst from the front down nozzle
-  const F = toScreen(P, SP.downF), kStop = onOff(t, A.tStop - A.d, A.tStop, 0.15);
-  text("反向喷，停转", F[0] + 30, F[1] + 54, 26, { color: ACCENT, alpha: kStop });
+  const F = toScreen(P, SP.downF), kStop = onOff(t, A.tStop - A.d2, A.tStop, 0.15);
+  text("反向喷，停转", F[0] + 40, F[1] + 64, 28, { color: ACCENT, alpha: kStop });
   const deg = Math.round((A.theta(t) * 180) / Math.PI);
   document.getElementById("readout").textContent = t < A.tSpin - 0.3 ? (open > 0.5 ? "阀门 开 · 喷气" : "阀门 关") : `转角 ${deg}°`;
 }
@@ -261,8 +266,8 @@ function bars(t) {
     text(`≈ ${M.thrustToWeight().toFixed(1)} 倍车重`, (x0 + x1) / 2, BY1 - 76, 30, { color: ACCENT, weight: 700, align: "center", alpha: kR });
   }
 }
-function vehicle(v, cx, alpha) {
-  const L = CX + (v.x - cx) * S, R = L + v.w * S, w = v.w * S; if (R < 0 || L > 1920) return;
+function vehicle(v, V, alpha) {
+  const S = V.S, L = CX + (v.x - V.cx) * S, R = L + v.w * S, w = v.w * S; if (R < 0 || L > 1920) return;
   const y = (m) => YG - m * S, X = (f) => L + f * w;
   g.save(); g.globalAlpha = alpha; g.lineJoin = "round";
   const body = "#cfc8ba", glass = "#e8e3d8", tyre = "#45423d";
@@ -284,19 +289,19 @@ function vehicle(v, cx, alpha) {
   g.restore();
 }
 function drawS10(t) {
-  const P = carPose(t), cx = P.cx;
-  ground(cx);
-  for (const v of B.vehicles) vehicle(v, cx, 1);
+  const P = carPose(t), sc = P.V.S / S1;
+  ground(P.V);
+  for (const v of B.vehicles) vehicle(v, P.V, 1);
   trail(B.tFire, t, null, 0.55);
-  const after = jetsAndThrust(t, P, B.jets, () => 0.5 * B.r * 92);
+  const after = jetsAndThrust(t, P, B.jets, () => 0.5 * B.r * 92 * sc);
   drawCar(g, carImg, P);
   // S09's last frame, then its marks clear away (the CG stays)
   const fade = 1 - seg(t, 0.25, 0.9);
   s09Geometry(P, { ...END09, axis: END09.axis * fade, arm: fade, armLbl: fade, cgLbl: END09.cgLbl * (1 - seg(t, 0.25, 0.9)), turnA: fade });
   // weight on the car, from "车重"
   const C = toScreen(P, SP.cg), kG = atWord(t, "L016", "车重");
-  arrow(g, C[0], C[1] + 18, C[0], C[1] + 18 + 92, INK, 8, kG, 28);
-  text("重力", C[0] + 22, C[1] + 92, 28, { alpha: kG });
+  arrow(g, C[0], C[1] + 18, C[0], C[1] + 18 + 92 * sc, INK, 8, kG, 28);
+  text("重力", C[0] + 22, C[1] + 92 * sc, 28, { alpha: kG });
   const kUp = onOff(t, B.jets[0].on, B.jets[0].off);
   text("推力", toScreen(P, SP.downR)[0] + 24, C[1] - 70, 28, { color: ACCENT, weight: 700, alpha: kUp });
   after(t);

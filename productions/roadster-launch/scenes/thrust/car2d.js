@@ -39,9 +39,10 @@ window.CAR2D = (() => {
       g.translate(cx - SP.cg[0], cy - SP.cg[1]); g.rotate(P.wheel); g.drawImage(img, -cx, -cy); g.restore();
     }
     if (bells) for (const [x, y] of [SP.downF, SP.downR]) {   // the two visible down nozzles
-      g.beginPath(); g.moveTo(x - 6 - SP.cg[0], y - 34 - SP.cg[1]); g.lineTo(x + 6 - SP.cg[0], y - 34 - SP.cg[1]);
-      g.lineTo(x + 14 - SP.cg[0], y - SP.cg[1]); g.lineTo(x - 14 - SP.cg[0], y - SP.cg[1]); g.closePath();
-      g.fillStyle = "#c3c6cc"; g.fill(); g.lineWidth = 2.2; g.strokeStyle = "#3c3a36"; g.stroke();
+      g.beginPath(); g.moveTo(x - 8 - SP.cg[0], y - 42 - SP.cg[1]); g.lineTo(x + 8 - SP.cg[0], y - 42 - SP.cg[1]);
+      g.lineTo(x + 19 - SP.cg[0], y - SP.cg[1]); g.lineTo(x - 19 - SP.cg[0], y - SP.cg[1]); g.closePath();
+      g.fillStyle = "#a9adb4"; g.fill(); g.lineWidth = 3; g.strokeStyle = "#2b2925"; g.stroke();
+      g.fillStyle = "#3c3a36"; g.fillRect(x - 19 - SP.cg[0], y - 5 - SP.cg[1], 38, 5);   // exit lip
     }
     g.restore();
   }

@@ -167,7 +167,7 @@ function draw(t) {
   // right: ground, car, jets, forces
   const kCar = atLine(t, "L018", 0.8);
   g.save(); g.globalAlpha = kCar; g.strokeStyle = INK; g.lineWidth = 2.5; g.beginPath(); g.moveTo(1150, GY); g.lineTo(1800, GY); g.stroke();
-  g.strokeStyle = SOFT; g.lineWidth = 1.4; for (let x = 1160; x < 1800; x += 24) { g.beginPath(); g.moveTo(x, GY); g.lineTo(x - 11, GY + 13); g.stroke(); }
+  g.strokeStyle = SOFT; g.lineWidth = 1.4; g.beginPath(); for (let x = 1160; x < 1800; x += 24) { g.moveTo(x, GY); g.lineTo(x - 11, GY + 13); } g.stroke();
   g.restore();
   const h = carHeight(tau, t);
   const P = { X: CAR_X, Y: GY - (SP.cgH + h) * PXM, phi: 0, k: K, mirror: true, wheel: 0 };
