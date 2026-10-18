@@ -57,11 +57,15 @@ def find_audio(lines_dir, lid):
     return None
 
 
+SUB_TRAIL = "，、,;；。：:"
+
+
 def split_sub(text, max_chars):
-    """Split a line into subtitle chunks of at most max_chars, preferring punctuation."""
+    """Split a line into subtitle chunks of at most max_chars, preferring punctuation.
+    Trailing commas and full stops are dropped (question marks, numbers and negations stay)."""
     text = text.strip()
     if len(text) <= max_chars:
-        return [text]
+        return [text.rstrip(SUB_TRAIL) or text]
     parts = [p for p in re.split(r"(?<=[，。！？；：、,.!?;:])", text) if p.strip()]
     chunks, cur = [], ""
     for p in parts:
@@ -84,7 +88,7 @@ def split_sub(text, max_chars):
         cur = p
     if cur:
         chunks.append(cur)
-    return [c.strip().rstrip("，、,;；") for c in chunks if c.strip()]
+    return [c.strip().rstrip(SUB_TRAIL) for c in chunks if c.strip().rstrip(SUB_TRAIL)]
 
 
 def srt_time(t):

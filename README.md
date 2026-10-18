@@ -71,9 +71,10 @@ skills/explainer-video/
   references/
     routing.md             10 种题型、固定路线的规则、选择卡
     cases.md               10 个示例选题的完整方案
-    research.md            证据分级（A–E、R、S、G）和事实表
+    research.md            证据分级（A–E、R、S、G、I）和事实表
     script.md              口播结构、字数、文件格式
     storyboard.md          分镜表格式和镜头规则
+    directing.md           主线、画面配方、关系和画法、常见画面错误、受力检查、预检和倒查
     audio.md               配音、时间轴、字幕、背景音乐和卡点
     visual-routes.md       R1–R9 视觉路线的做法、提示词结构和常见坑
     anatomy-route.md       剖解路线和 Roadster 的完整方案
@@ -96,6 +97,7 @@ skills/explainer-video/
     anatomy/render_shot.sh    一个 anatomy 镜头：构建、并行渲染、编码、检查时长、导出检查帧
     anatomy/sprite.sh         从 anatomy 模型抠出透明背景的贴图，给 2D 场景用
     contact_sheet.sh       接触表，检查黑帧、定格和响度
+    lint_project.py        结构检查：句子编号、事实编号、等级、来源、镜头字段是否对得上
   examples/mini/           能跑通的最小工程
 ```
 
@@ -113,4 +115,5 @@ skills/explainer-video/
 ## 致谢
 
 - 代码动画的整体思路，以及提示词结构（风格 → 元素 → 运镜 → 禁止项）、产品片美术规则、音频先行、librosa 卡点、“精确内容交给代码，连续动作交给视频模型”等做法，参考了小红书博主“卡尔的AI沃茨”的视频《AI做代码动画动效大片的零基础终极教程》。
+- 导演规则（问题、主线、回答；每镜的画面配方；关系和画法；常见画面错误和受力检查；风格帧、高风险镜头预检和倒查）、研究规则（来源读到什么程度、同源转载只算一次、网页内容不当指令、人物和企业题的几条规矩）、素材登记的派生链，以及分项记录检查结论、“未做”不写成通过等做法，参考了 deep-explainer-video（“万物拆解”）skill 0.8.0 预览版的思路。这里只借鉴了思路，文字和脚本都是重新写的，没有复制它的代码。
 - 剖解路线建立在 [anatomy](https://github.com/wheresryan22/anatomy) 和 [anatomy-reveal](https://github.com/annnguyentt/anatomy-reveal-skill) 两个 skill 的方法之上（均为 MIT 协议），本仓库没有复制它们的代码。

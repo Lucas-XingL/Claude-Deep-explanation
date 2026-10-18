@@ -1,17 +1,58 @@
 {
-  "meta": { "title": "Roadster · 样片", "width": 1920, "height": 1080, "fps": 30, "style": "style.json" },
+  "meta": {
+    "title": "Roadster · 样片",
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "style": "style.json",
+    "question": "它到底是怎么做到的？真的能飞吗？",
+    "throughline": "抓地力有上限 → 风扇把车吸在地上 → 推进器干脆不靠轮胎 → 算一笔气量账",
+    "answer": "能离地几秒钟，离持续飞行还很远；推力和气量都还只是工程师的说法"
+  },
   "assets": {
     "car": "scenes/_shared/car：中性外观的推进器跑车模型（Rocket 配置），104 个零件",
     "thrust": "scenes/thrust：推力与重力的侧视图解，读数来自 scenes/_shared/model.js"
   },
   "shots": [
-    { "id": "S01", "section": "钩子", "lines": ["L001", "L002", "L003", "L004"], "pre": 0.5, "post": 0.4, "route": "R1", "asset": "car",
+    {
+      "id": "S01",
+      "section": "钩子",
+      "lines": ["L001", "L002", "L003", "L004"],
+      "pre": 0.5,
+      "post": 0.4,
+      "route": "R1",
+      "asset": "car",
       "source": "scenes/_shared/car/motion/shots/S01.html",
       "visual": "车从远处驶来，轮子转动；说到“翻个身”时车离地翻转一周落地；L003 停在英雄镜头，角标“宣称”；L004 车身拆开，露出气瓶、喷口和风扇",
-      "camera": "从车头斜前方出发 → 跟随翻转 → 停在斜上方看拆开的车", "onscreen": ["宣称"], "evidence": ["F01", "F02", "F03"] },
-    { "id": "S02", "section": "推进器", "lines": ["L018", "L019"], "pre": 0.3, "post": 1.0, "route": "R3", "asset": "thrust",
+      "camera": "从车头斜前方出发 → 跟随翻转 → 停在斜上方看拆开的车",
+      "onscreen": ["宣称"],
+      "evidence": ["F01", "F02", "F03"],
+      "new_info": "发布会演示了什么，以及“飞行汽车”的宣称",
+      "subject": "整辆车",
+      "relation": "结构和组成",
+      "change": "开进来、翻转一周、拆开",
+      "result": "露出气瓶、喷口和风扇，角标标明“宣称”",
+      "risks": ["key_action", "continuity"]
+    },
+    {
+      "id": "S02",
+      "section": "推进器",
+      "lines": ["L018", "L019"],
+      "pre": 0.3,
+      "post": 1.0,
+      "route": "R3",
+      "asset": "thrust",
       "source": "scenes/thrust/index.html",
       "visual": "侧视：车停在测力台上，推力条从 0 涨到 80 kN（宣称），越过 16.7 kN 重力线时车离地",
-      "camera": "固定", "onscreen": ["推力 kN", "重力 16.7 kN", "宣称", "估算"], "evidence": ["F13", "F14"] }
+      "camera": "固定",
+      "onscreen": ["推力 kN", "重力 16.7 kN", "宣称", "估算"],
+      "evidence": ["F13", "F14"],
+      "new_info": "推力和重力的比较",
+      "subject": "停在测力台上的车",
+      "relation": "力和运动",
+      "change": "推力条从 0 涨到 80 kN（宣称），越过 16.7 kN 重力线",
+      "result": "测力台读数降到 0，车和地面之间出现缝隙",
+      "risks": ["key_action"]
+    }
   ]
 }

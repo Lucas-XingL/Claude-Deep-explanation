@@ -9,7 +9,10 @@
   "meta": {
     "title": "黑洞照片",
     "width": 1920, "height": 1080, "fps": 30,
-    "style": "style.json"
+    "style": "style.json",
+    "question": "连光都逃不出来，为什么还能给它拍照？",
+    "throughline": "黑洞本身不发光 → 亮的是周围的热气体 → 光被弯折成一圈 → 地球大小的望远镜才分辨得出",
+    "answer": "拍到的是黑洞的影子和周围的光环，不是黑洞本身"
   },
   "assets": {
     "disk3d": "3D 吸积盘场景，scenes/_shared/disk/，可以改机位和光线弯曲强度",
@@ -30,6 +33,12 @@
       "onscreen": ["模拟"],
       "evidence": ["F01"],
       "transition_in": "cut",
+      "new_info": "提出问题：一个看不见的东西，照片里是什么",
+      "subject": "亮环",
+      "relation": "证据链",
+      "change": "镜头从黑暗推近，亮环慢慢出现",
+      "result": "构图停在和 EHT 图像一致的位置，下一镜直接换成真实图像",
+      "risks": ["continuity"],
       "notes": "最后一帧的构图要和 S02 的第一帧一致（匹配剪辑）"
     },
     {
@@ -61,6 +70,11 @@
 | `onscreen` | 否 | 屏幕上的文字和角标，字幕不算在内 |
 | `evidence` | 否 | 这个镜头展示的事实编号 |
 | `transition_in` | 否 | `cut`（默认）或 `match`（匹配剪辑，前后帧在场景里对齐）。转场效果在场景内部做，合成时只做硬切 |
+| `new_info` | 建议 | 这个镜头给观众带来的新东西。写不出来就删掉或合并这个镜头 |
+| `subject` / `relation` / `change` / `result` | 建议 | 画面配方：看哪个东西、讲什么关系、什么在变、后果在哪里看得见（见 `directing.md` 第 2、3 节） |
+| `risks` | 否 | `key_action`、`continuity`、`occlusion`、`image_visibility`，渲染前按 `directing.md` 第 8 节预检 |
+
+`meta` 里的 `question`、`throughline`、`answer` 是全片的问题、主线和回答（见 `directing.md` 第 1 节）。脚本和分镜都写好后，运行 `python3 scripts/lint_project.py <proj>` 检查句子编号、事实编号、镜头字段是否对得上。
 
 镜头时长由 `timeline.py` 根据配音自动算出，写进 `audio/timeline.json`。不要手动填每个镜头的时长，纯画面镜头除外。
 
@@ -73,6 +87,7 @@
 5. **一屏的文字不超过 15 个字**，字幕不算。字号不小于画面高度的 1/24。角标和署名放在 `style.json` 规定的安全区里。
 6. **母版资产要复用。** 同一个模型、同一张地图在全片里反复出现，只改机位、高亮和状态。观众会把它当成“地图”来记，也能省下大量制作时间。
 7. **画面和口播说的是同一件事。** 口播讲 A 的时候，画面不要在演 B。
+8. **一个场景可以跨好几句。** 不要每换一句就切一个新画面、把镜头拉回全景。更多镜头语法和常见画面错误见 `directing.md`。
 
 ## 3. 画面描述怎么写（visual 和 camera 字段）
 

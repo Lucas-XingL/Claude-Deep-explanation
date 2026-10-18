@@ -5,6 +5,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 SK="$HERE/../../scripts"
 
+python3 "$SK/lint_project.py" "$HERE"
 python3 "$SK/tts_lines.py" "$HERE" --engine placeholder
 python3 "$SK/timeline.py" "$HERE"
 for id in S01 S02 S03; do

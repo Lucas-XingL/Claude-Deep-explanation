@@ -1,30 +1,71 @@
 {
-  "meta": { "title": "齿轮为什么能变慢变有劲", "width": 1920, "height": 1080, "fps": 30, "style": "style.json" },
+  "meta": {
+    "title": "齿轮为什么能变慢变有劲",
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "style": "style.json",
+    "question": "小齿轮怎么让大齿轮转得更慢、却更有劲？",
+    "throughline": "咬合处走过的齿数相等 → 齿数比 1:3 → 圈数比 3:1",
+    "answer": "转速降到三分之一，扭矩（理想情况下）放大三倍"
+  },
   "assets": {
     "gears": "一对啮合齿轮，z1 = 12、z2 = 36，所有角度都从同一个模型 θ1(t) 算出"
   },
   "shots": [
     {
-      "id": "S01", "section": "钩子", "lines": ["L001"], "pre": 0.4, "post": 0.4,
-      "route": "R2", "source": "scenes/S01/index.html",
+      "id": "S01",
+      "section": "钩子",
+      "lines": ["L001"],
+      "pre": 0.4,
+      "post": 0.4,
+      "route": "R2",
+      "source": "scenes/S01/index.html",
       "visual": "纸面背景，问题逐字出现，右侧一大一小两个齿轮的剪影",
       "camera": "固定机位",
-      "onscreen": ["问题文字"]
+      "onscreen": ["问题文字"],
+      "new_info": "提出问题",
+      "subject": "一大一小两个齿轮",
+      "relation": "对比",
+      "change": "问题逐字出现",
+      "result": "问题留在画面上"
     },
     {
-      "id": "S02", "section": "原理", "lines": ["L002", "L003", "L004"], "pre": 0.3, "post": 0.8,
-      "route": "R1", "asset": "gears", "source": "scenes/S02/index.html",
+      "id": "S02",
+      "section": "原理",
+      "lines": ["L002", "L003", "L004"],
+      "pre": 0.3,
+      "post": 0.8,
+      "route": "R1",
+      "asset": "gears",
+      "source": "scenes/S02/index.html",
       "visual": "两个齿轮咬合转动；说到齿数时齿数标签亮起，说到圈数时计数器亮起",
       "camera": "固定机位，L004 期间缓慢推近啮合点",
       "onscreen": ["12 齿", "36 齿", "圈数计数器"],
-      "evidence": ["F01", "F02", "F03"]
+      "evidence": ["F01", "F02", "F03"],
+      "new_info": "齿数相等 → 圈数比",
+      "subject": "啮合点和两个齿轮",
+      "relation": "因果链",
+      "change": "两个齿轮按 θ1(t) 咬合转动，齿数标签依次亮起",
+      "result": "圈数计数器：小齿轮 3 圈时大齿轮 1 圈",
+      "risks": ["key_action"]
     },
     {
-      "id": "S03", "section": "收束", "lines": [], "duration": 2.5,
-      "route": "R2", "source": "scenes/S03/index.html",
+      "id": "S03",
+      "section": "收束",
+      "lines": [],
+      "duration": 2.5,
+      "route": "R2",
+      "source": "scenes/S03/index.html",
       "visual": "结论卡：转速 ÷3，扭矩 ×3，带“理想情况”角标",
       "onscreen": ["转速 ÷3 · 扭矩 ×3", "理想情况，忽略摩擦"],
-      "evidence": ["F03"]
+      "evidence": ["F03"],
+      "camera": "固定机位",
+      "new_info": "把结论说成两个数",
+      "subject": "结论卡",
+      "relation": "对比",
+      "change": "两行结论依次出现",
+      "result": "转速 ÷3 · 扭矩 ×3，带“理想情况”角标"
     }
   ]
 }

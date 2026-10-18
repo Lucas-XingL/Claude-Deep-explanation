@@ -1,21 +1,78 @@
 {
-  "meta": { "title": "机械表 · 样片", "width": 1920, "height": 1080, "fps": 30, "style": "style.json" },
+  "meta": {
+    "title": "机械表 · 样片",
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "style": "style.json",
+    "question": "没有电池，机械表靠什么一直走，又怎么知道一秒有多长？",
+    "throughline": "摆陀卷紧发条 → 齿轮把力一级级传下去 → 摆轮定节拍 → 擒纵把力切成一份一份",
+    "answer": "能量来自手腕的动作，快慢由摆轮决定，擒纵每半个齿放行一次，滴答声就是它"
+  },
   "assets": {
     "movement": "scenes/_shared/movement：示意自动机芯，144 个零件，所有运动由 movement(tau) 驱动",
     "escapement": "scenes/escapement：瑞士杠杆擒纵俯视图，同一个模型"
   },
   "shots": [
-    { "id": "S01", "section": "钩子", "lines": ["L001", "L002"], "pre": 0.6, "post": 0.5, "route": "R1", "asset": "movement",
+    {
+      "id": "S01",
+      "section": "钩子",
+      "lines": ["L001", "L002"],
+      "pre": 0.6,
+      "post": 0.5,
+      "route": "R1",
+      "asset": "movement",
       "source": "scenes/_shared/movement/motion/shots/S01.html",
       "visual": "表盘朝向观众，小秒针按真实节奏一步步走；L002 时整块表翻过来，露出摆陀和机芯",
-      "camera": "从表盘正面略仰视出发 → 翻转经过侧面 → 停在后盖斜上方", "onscreen": [], "evidence": ["F08"] },
-    { "id": "S02", "section": "擒纵", "lines": ["L015"], "pre": 0.3, "post": 0.4, "route": "R1", "asset": "movement",
+      "camera": "从表盘正面略仰视出发 → 翻转经过侧面 → 停在后盖斜上方",
+      "onscreen": [],
+      "evidence": ["F08"],
+      "new_info": "问题：没有电池，靠什么走",
+      "subject": "表盘和小秒针",
+      "relation": "结构和组成",
+      "change": "整块表翻过来",
+      "result": "露出摆陀和机芯，引出“能量从哪来”",
+      "risks": ["key_action"]
+    },
+    {
+      "id": "S02",
+      "section": "擒纵",
+      "lines": ["L015"],
+      "pre": 0.3,
+      "post": 0.4,
+      "route": "R1",
+      "asset": "movement",
       "source": "scenes/_shared/movement/motion/shots/S02.html",
       "visual": "后盖和摆陀抬起移出画面，镜头推近摆轮、擒纵叉和擒纵轮，机芯以真实速度运转",
-      "camera": "从后盖上方出发 → 推近 → 停在摆轮与擒纵叉之间", "onscreen": ["28800 次/小时"], "evidence": ["F08", "F09"] },
-    { "id": "S03", "section": "擒纵", "lines": ["L016", "L017", "L018", "L019"], "pre": 0.3, "post": 1.0, "route": "R1",
-      "asset": "escapement", "source": "scenes/escapement/index.html",
+      "camera": "从后盖上方出发 → 推近 → 停在摆轮与擒纵叉之间",
+      "onscreen": ["28800 次/小时"],
+      "evidence": ["F08", "F09"],
+      "new_info": "摆轮和擒纵在哪、以真实速度怎么动",
+      "subject": "摆轮、擒纵叉、擒纵轮",
+      "relation": "结构和组成",
+      "change": "后盖和摆陀移走，镜头推近",
+      "result": "真实速度下看得到摆轮每秒摆 8 次，但看不清细节，引出下一镜慢放",
+      "risks": ["continuity"]
+    },
+    {
+      "id": "S03",
+      "section": "擒纵",
+      "lines": ["L016", "L017", "L018", "L019"],
+      "pre": 0.3,
+      "post": 1.0,
+      "route": "R1",
+      "asset": "escapement",
+      "source": "scenes/escapement/index.html",
       "visual": "擒纵机构俯视，慢放 1/16：锁住 → 拨开走半齿 → 冲击补能 → 滴答",
-      "camera": "固定", "onscreen": ["擒纵轮", "擒纵叉", "半个齿计数", "推", "滴/答"], "evidence": ["F09", "F10", "F11"] }
+      "camera": "固定",
+      "onscreen": ["擒纵轮", "擒纵叉", "半个齿计数", "推", "滴/答"],
+      "evidence": ["F09", "F10", "F11"],
+      "new_info": "擒纵怎样把力切成一份一份",
+      "subject": "擒纵轮和擒纵叉",
+      "relation": "因果链",
+      "change": "慢放 1/16：锁住 → 拨开 → 走半个齿 → 冲击",
+      "result": "半齿计数器加一，冲击时摆轮被推一下，响一声滴答",
+      "risks": ["key_action"]
+    }
   ]
 }
