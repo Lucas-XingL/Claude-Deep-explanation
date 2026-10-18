@@ -2,7 +2,7 @@
 
 一个通用的 agent skill：把一个选题做成有配音、字幕和动画的**科普讲解视频或短纪录片（MP4）**。
 
-核心方法：先研究并给事实分级；再写全片脚本、做分镜，生成一个方案页（脚本、分镜、关键画面、试听、待确认事项）给用户确认；确认后配音先行排出时间轴；开场先给 3–6 秒真实画面（agent 自己找素材，拿不到就用生图模型还原并标注），再转成线稿、变成我们的模型；讲解部分用代码逐帧渲染画面（Remotion、HyperFrames、Manim、Canvas、p5、Three.js 或 anatomy 等距剖解）；最后用 ffmpeg 合成，并抽帧自检。视频模型只用来补代码画不了的镜头。
+核心方法：先研究并给事实分级；再写全片脚本、做分镜，生成一个方案页（脚本、分镜、关键画面、试听、待确认事项）给用户确认；确认后配音先行排出时间轴；开场先给 3–6 秒真实画面（agent 自己找素材，拿不到就用生图模型还原并标注），再转成线稿、变成我们的模型；讲解部分用代码逐帧渲染画面（Remotion、HyperFrames、Manim、Canvas、p5、Three.js 或 anatomy 等距剖解）；最后用 ffmpeg 合成，并抽帧自检。视频模型只用来补代码画不了的镜头。能开子代理时，研究、母版资产、镜头制作和审片都必须分给子代理并行做，主代理负责和用户沟通、写脚本分镜、汇合和检查。
 
 ## 覆盖的题型
 
@@ -86,7 +86,7 @@ skills/explainer-video/
   templates/               brief.md、choice-card.md、style.json、scene.html、
                            scene-paper.html 和 paper.css（纸面风 2D 场景）、model.js（数值模型）、
                            anatomy-shot.mjs（anatomy 镜头关键帧）、sfx.py（模型驱动的音效）、
-                           research-brief.md（研究子代理的任务说明）、plan.html（方案页模板）、
+                           research-brief.md、shot-brief.md（研究和制作子代理的任务说明）、plan.html（方案页模板）、
                            scene-reveal.html（开场转场：真实画面 → 线稿 → 模型）、
                            hyperframes/（HyperFrames 信息动效镜头，纸面和深色两套主题）
   scripts/
