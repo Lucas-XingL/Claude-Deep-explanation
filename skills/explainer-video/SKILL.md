@@ -76,7 +76,9 @@ compatibility: 任何能执行 shell、读写文件、能看图片的 agent（Cl
 ### 5. 配音和时间轴
 按 `references/audio.md` 处理：
 1. 用 `scripts/tts_lines.py` 生成分句配音（也可以用用户自己的录音）。
-2. 用 `scripts/timeline.py` 生成 `audio/timeline.json`，里面有每个镜头和每句话的起止时间，同时生成 `narration.wav` 和 `subs.srt`。
+2. 用 `scripts/check_tts.py` 把配音转写回文字，和脚本对比，找出读错的句子。
+3. 用 `scripts/timeline.py` 生成 `audio/timeline.json`，里面有每个镜头和每句话的起止时间，同时生成 `narration.wav` 和 `subs.srt`。
+4. 没有可用的授权音乐时，用 `scripts/make_bed.py` 合成一段音床。音效的时间点从画面用的同一个模型算出来。
 
 ### 6. 先做 30 秒样片
 用开头的钩子加一个核心镜头，做一段 30 秒左右的样片，交给用户确认风格。用户确认后再做全片。

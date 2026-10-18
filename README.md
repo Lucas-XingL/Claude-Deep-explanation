@@ -86,6 +86,8 @@ skills/explainer-video/
     timeline.py            分镜 + 脚本 + 配音 → timeline.json、narration.wav、subs.srt
     capture_frames.mjs     HTML 场景逐帧渲染成 mp4 或静帧（虚拟时钟、固定随机种子）
     assemble.py            拼接、混音、背景音乐避让口播、统一响度、字幕；缺镜头时出占位卡
+    check_tts.py           把配音转写回文字、和脚本对比，找出读错的句子（faster-whisper）
+    make_bed.py            没有授权音乐时，合成一段环境音床
     beats.py               音乐节拍分析，对齐镜头边界
     contact_sheet.sh       接触表，检查黑帧、定格和响度
   examples/mini/           能跑通的最小工程

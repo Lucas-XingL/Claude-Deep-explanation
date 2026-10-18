@@ -1,0 +1,194 @@
+<!doctype html>
+<!--
+  Thrust vs weight, side elevation on paper. The car sprite is the anatomy model's side view
+  (scenes/_shared/car_side.png); every number comes from ../_shared/model.js.
+  L018: thrust bar grows to the claimed 80 kN, then the weight line appears.
+  L019: the down nozzles fire; when thrust passes the weight, the scale reads zero and the car lifts.
+-->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../_shared/paper.css">
+</head>
+<body>
+<div class="mo">
+  <div class="mo-bg"></div>
+  <canvas id="c"></canvas>
+  <div class="mo-vignette"></div>
+  <div class="mo-plate">
+    <span class="mo-corner" data-c="fig">Fig 2</span>
+    <span class="mo-corner" data-c="title">ANATOMY · 推力与重力</span>
+    <span class="mo-corner" data-c="hint" id="hint">侧视 · 测力台</span>
+    <span class="mo-corner" data-c="readout" id="readout"></span>
+  </div>
+</div>
+<script src="../_shared/model.js"></script>
+<script>
+const SCENE = window.SCENE || { width: 1920, height: 1080, fps: 30, duration: 15.3 };
+const SHOT = window.SHOT || { id: "S02", duration: 15.3, lines: [{ id: "L018", start: 0.3, end: 6.56 }, { id: "L019", start: 6.81, end: 13.32 }] };
+const DURATION = SHOT.duration || SCENE.duration;
+const W = SCENE.width, H = SCENE.height, U = Math.min(W, H) / 1080, PORTRAIT = H > W;
+document.documentElement.style.setProperty("--mo-w", W + "px");
+document.documentElement.style.setProperty("--mo-h", H + "px");
+const cv = document.getElementById("c"); cv.width = W; cv.height = H;
+const g = cv.getContext("2d");
+const INK = "#2b2925", SOFT = "rgba(43,41,37,.55)", ACCENT = "#d9562f", BLUE = "#2e86ab", GREY = "#8d8a84";
+const FONT = '"Noto Sans CJK SC","Source Han Sans SC","PingFang SC","Microsoft YaHei","WenQuanYi Zen Hei",sans-serif';
+const MONO = 'ui-monospace,"SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace';
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eo = (k) => 1 - Math.pow(1 - k, 3);
+const eio = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+const line = (id) => SHOT.lines.find((l) => l.id === id) || { start: 0, end: 0 };
+const L18 = line("L018"), L19 = line("L019");
+
+const img = new Image();
+img.src = "../_shared/car_side.png";
+window.sceneReady = Promise.all([document.fonts.ready, new Promise((r) => (img.complete ? r() : (img.onload = r)))]);
+
+const R = window.RS;
+const Wn = R.weight();               // 16.7 kN
+const Tclaim = R.thrustClaim;        // 80 kN (claim)
+
+// Layout
+const groundY = PORTRAIT ? H * 0.58 : H * 0.68;
+const carW = (PORTRAIT ? 0.86 : 0.5) * W, carX = PORTRAIT ? W * 0.07 : W * 0.08;
+const chartX = PORTRAIT ? W * 0.1 : W * 0.63, chartW = PORTRAIT ? W * 0.8 : W * 0.3;
+const chartY = PORTRAIT ? H * 0.72 : H * 0.3;
+const kNtoPx = chartW / 90000;
+
+function text(s, x, y, size, { color = INK, weight = 600, align = "left", font = FONT, alpha = 1 } = {}) {
+  g.save(); g.globalAlpha = alpha; g.fillStyle = color; g.textAlign = align; g.textBaseline = "middle";
+  g.font = `${weight} ${size * U}px ${font}`; g.fillText(s, x, y); g.restore();
+}
+function badge(label, x, y, color, alpha) {
+  if (alpha <= 0) return;
+  g.save(); g.globalAlpha = alpha; g.font = `600 ${22 * U}px ${FONT}`;
+  const w = g.measureText(label).width + 22 * U, h = 36 * U;
+  g.strokeStyle = color; g.lineWidth = 2 * U; g.beginPath(); g.roundRect(x, y - h / 2, w, h, 6 * U); g.stroke();
+  g.fillStyle = color; g.textBaseline = "middle"; g.fillText(label, x + 11 * U, y + 1 * U); g.restore();
+}
+function arrow(x, y0, y1, color, width, alpha) {
+  if (alpha <= 0 || Math.abs(y1 - y0) < 4) return;
+  const dir = Math.sign(y1 - y0);
+  g.save(); g.globalAlpha = alpha; g.strokeStyle = color; g.fillStyle = color; g.lineWidth = width; g.lineCap = "round";
+  g.beginPath(); g.moveTo(x, y0); g.lineTo(x, y1 - dir * 18 * U); g.stroke();
+  g.beginPath(); g.moveTo(x, y1); g.lineTo(x - 14 * U, y1 - dir * 26 * U); g.lineTo(x + 14 * U, y1 - dir * 26 * U); g.closePath(); g.fill();
+  g.restore();
+}
+
+// Thrust over time (N): L018 shows the claimed peak; L019 the down nozzles ramp past the weight.
+function thrustAt(t) {
+  if (t < L19.start) return Tclaim * eio(seg(t, L18.start + 0.4, L18.start + 2.6));
+  return 1.35 * Wn * eio(seg(t, L19.start + 0.9, L19.start + 3.4));
+}
+// Height from integrating (T − W)/m once thrust exceeds weight (E), capped for the drawing.
+function liftAt(t) {
+  if (t < L19.start) return 0;
+  let h = 0, v = 0;
+  const m = R.massCar, dt = 1 / 60;
+  for (let s = L19.start; s < t; s += dt) {
+    const a = Math.max(0, (thrustAt(s) - Wn) / m);
+    v += a * dt; h += v * dt;
+  }
+  return Math.min(h, 1.2); // metres, the drawing shows the first metre or so
+}
+
+function draw(t) {
+  g.clearRect(0, 0, W, H);
+  const T = thrustAt(t);
+  const firing = t >= L19.start;
+  const h = liftAt(t);
+  const pxPerM = carW / 4.3;
+  const lift = h * pxPerM;
+
+  // Ground and the test stand (a platform on a load cell).
+  g.strokeStyle = INK; g.lineWidth = 2 * U;
+  g.beginPath(); g.moveTo(carX - 60 * U, groundY + 40 * U); g.lineTo(carX + carW + 60 * U, groundY + 40 * U); g.stroke();
+  for (let x = carX - 50 * U; x < carX + carW + 60 * U; x += 26 * U) { g.beginPath(); g.moveTo(x, groundY + 40 * U); g.lineTo(x - 14 * U, groundY + 54 * U); g.strokeStyle = SOFT; g.lineWidth = 1.3 * U; g.stroke(); }
+  g.fillStyle = "#e4e0d6"; g.strokeStyle = INK; g.lineWidth = 2 * U;
+  g.beginPath(); g.roundRect(carX + carW * 0.04, groundY, carW * 0.92, 18 * U, 4 * U); g.fill(); g.stroke();
+  for (const fx of [0.2, 0.8]) { g.beginPath(); g.roundRect(carX + carW * fx - 30 * U, groundY + 18 * U, 60 * U, 22 * U, 3 * U); g.fillStyle = "#cfcbc2"; g.fill(); g.stroke(); }
+
+  // Exhaust from the four down nozzles (two visible per side, at the front and rear corners).
+  // Down nozzles at y = +1700 / −1750 mm on a 4.43 m sprite (nose at the left).
+  const nozzles = [0.1, 0.878].map((f) => carX + carW * f);
+  const carBottom = groundY - lift;
+  if (firing && T > 0) {
+    const k = T / (1.35 * Wn);
+    for (const nx of nozzles) {
+      const len = (60 + 140 * k) * U + lift;
+      const grd = g.createLinearGradient(0, carBottom, 0, carBottom + len);
+      grd.addColorStop(0, "rgba(120,170,210,.75)"); grd.addColorStop(1, "rgba(120,170,210,0)");
+      g.fillStyle = grd;
+      g.beginPath(); g.moveTo(nx - 10 * U, carBottom); g.lineTo(nx + 10 * U, carBottom); g.lineTo(nx + (24 + 40 * k) * U, carBottom + len); g.lineTo(nx - (24 + 40 * k) * U, carBottom + len); g.closePath(); g.fill();
+      // Shock diamonds in the supersonic jet (F13 in sources: visible Mach diamonds).
+      for (let j = 1; j <= 3; j++) { const y = carBottom + j * 0.22 * len; g.fillStyle = `rgba(255,255,255,${0.55 - j * 0.12})`; g.beginPath(); g.ellipse(nx, y, 7 * U, 4 * U, 0, 0, Math.PI * 2); g.fill(); }
+    }
+  }
+  // L018: the rear nozzles blow backwards and push the car forward (it stays on the stand).
+  if (!firing && T > 0) {
+    const k = T / Tclaim, ry = groundY - carW * 0.068, rx = carX + carW * 1.0;
+    const len = (80 + 260 * k) * U;
+    const grd = g.createLinearGradient(rx, 0, rx + len, 0);
+    grd.addColorStop(0, "rgba(120,170,210,.75)"); grd.addColorStop(1, "rgba(120,170,210,0)");
+    g.fillStyle = grd; g.beginPath(); g.moveTo(rx, ry - 12 * U); g.lineTo(rx, ry + 12 * U); g.lineTo(rx + len, ry + (30 + 40 * k) * U); g.lineTo(rx + len, ry - (30 + 40 * k) * U); g.closePath(); g.fill();
+    for (let j = 1; j <= 3; j++) { g.fillStyle = `rgba(255,255,255,${0.55 - j * 0.12})`; g.beginPath(); g.ellipse(rx + j * 0.22 * len, ry, 4 * U, 7 * U, 0, 0, Math.PI * 2); g.fill(); }
+  }
+  // The car.
+  if (img.complete && img.naturalWidth) {
+    const ih = (img.naturalHeight / img.naturalWidth) * carW;
+    g.drawImage(img, carX, groundY - ih - lift + 4 * U, carW, ih);
+  }
+  // L018: the rear thrust on the car points forward (to the left), drawn over the car.
+  if (!firing && T > 0) {
+    const k = T / Tclaim;
+    g.save(); g.strokeStyle = ACCENT; g.fillStyle = ACCENT; g.lineWidth = 6 * U; g.lineCap = "round";
+    const ax0 = carX + carW * 0.62, ax1 = ax0 - (60 + 200 * k) * U, ay = groundY - carW * 0.14;
+    g.beginPath(); g.moveTo(ax0, ay); g.lineTo(ax1 + 18 * U, ay); g.stroke();
+    g.beginPath(); g.moveTo(ax1, ay); g.lineTo(ax1 + 26 * U, ay - 14 * U); g.lineTo(ax1 + 26 * U, ay + 14 * U); g.closePath(); g.fill(); g.restore();
+  }
+  // Forces on the car: weight down (from the centre), thrust up (at the nozzles).
+  const cx = carX + carW * 0.5, cy = groundY - carW * 0.12 - lift;
+  const kW = seg(t, L18.start + 3.2, L18.start + 3.8);
+  arrow(cx, cy, cy + Math.min(200, (Wn / 1000) * 9) * U, INK, 6 * U, kW);
+  text(`重力 ${(Wn / 1000).toFixed(1)} kN`, cx + 22 * U, cy + 120 * U, 30, { alpha: kW });
+  if (firing && T > 0) for (const nx of nozzles) arrow(nx, carBottom - 6 * U, carBottom - 6 * U - (T / 2 / 1000) * 9 * U, ACCENT, 6 * U, 1);
+
+  // Scale reading (what the test stand feels): weight minus thrust, never below zero.
+  const scale = firing ? Math.max(0, Wn - T) : Wn;
+  text(`测力台读数  ${(scale / 1000).toFixed(1)} kN`, carX + carW * 0.5, groundY + 86 * U, 26, { align: "center", font: MONO, weight: 500, color: SOFT });
+
+  // Chart: thrust bar vs the weight line.
+  const kChart = seg(t, L18.start, L18.start + 0.6);
+  if (kChart > 0) {
+    g.save(); g.globalAlpha = kChart;
+    text(t < L19.start ? "车尾推力" : "向下推力", chartX, chartY - 70 * U, 34);
+    g.fillStyle = "#e4e0d6"; g.fillRect(chartX, chartY - 30 * U, chartW, 60 * U);
+    g.fillStyle = ACCENT; g.fillRect(chartX, chartY - 30 * U, T * kNtoPx, 60 * U);
+    g.strokeStyle = INK; g.lineWidth = 2 * U; g.strokeRect(chartX, chartY - 30 * U, chartW, 60 * U);
+    for (let kN = 0; kN <= 90; kN += 10) { const x = chartX + kN * 1000 * kNtoPx; g.beginPath(); g.moveTo(x, chartY + 30 * U); g.lineTo(x, chartY + (kN % 50 ? 40 : 48) * U); g.stroke(); if (kN % 20 === 0) text(`${kN}`, x, chartY + 66 * U, 20, { align: "center", font: MONO, weight: 400, color: SOFT }); }
+    text("kN", chartX + chartW + 14 * U, chartY + 66 * U, 20, { font: MONO, weight: 400, color: SOFT });
+    text(`${(T / 1000).toFixed(1)} kN`, chartX + chartW, chartY - 70 * U, 34, { align: "right", color: ACCENT, font: MONO });
+    g.restore();
+    badge(t < L19.start ? "宣称：超过 80 kN" : "下喷口推力（示意）", chartX, chartY + 110 * U, ACCENT, kChart);
+    // Weight line across the bar.
+    if (kW > 0) {
+      const x = chartX + Wn * kNtoPx;
+      g.save(); g.globalAlpha = kW; g.strokeStyle = INK; g.lineWidth = 3 * U; g.setLineDash([10 * U, 8 * U]);
+      g.beginPath(); g.moveTo(x, chartY - 52 * U); g.lineTo(x, chartY + 52 * U); g.stroke(); g.restore();
+      text("车重", x + 10 * U, chartY, 24, { alpha: kW, weight: 700, color: T * kNtoPx > x - chartX + 60 * U ? "#fff" : INK });
+      badge("估算：1700 kg × g", chartX + chartW * 0.42, chartY + 110 * U, BLUE, kW);
+    }
+    // "Thrust > weight" when the car leaves the stand.
+    const kUp = seg(h, 0.01, 0.08);
+    text("推力 > 重力 → 离地", chartX, chartY + 190 * U, 40, { color: ACCENT, alpha: kUp });
+  }
+  document.getElementById("readout").textContent = `离地 ${h.toFixed(2)} m · 推力/重力 ${(T / Wn).toFixed(2)}`;
+}
+
+window.renderFrame = (t) => draw(t);
+if (!window.__seek) { const t0 = performance.now(); const loop = () => { draw(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); }; requestAnimationFrame(loop); } else draw(0);
+</script>
+</body>
+</html>

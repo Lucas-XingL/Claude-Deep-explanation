@@ -1,0 +1,21 @@
+{
+  "meta": { "title": "机械表 · 样片", "width": 1920, "height": 1080, "fps": 30, "style": "style.json" },
+  "assets": {
+    "movement": "scenes/_shared/movement：示意自动机芯，144 个零件，所有运动由 movement(tau) 驱动",
+    "escapement": "scenes/escapement：瑞士杠杆擒纵俯视图，同一个模型"
+  },
+  "shots": [
+    { "id": "S01", "section": "钩子", "lines": ["L001", "L002"], "pre": 0.6, "post": 0.5, "route": "R1", "asset": "movement",
+      "source": "scenes/_shared/movement/motion/shots/S01.html",
+      "visual": "表盘朝向观众，小秒针按真实节奏一步步走；L002 时整块表翻过来，露出摆陀和机芯",
+      "camera": "从表盘正面略仰视出发 → 翻转经过侧面 → 停在后盖斜上方", "onscreen": [], "evidence": ["F08"] },
+    { "id": "S02", "section": "擒纵", "lines": ["L015"], "pre": 0.3, "post": 0.4, "route": "R1", "asset": "movement",
+      "source": "scenes/_shared/movement/motion/shots/S02.html",
+      "visual": "后盖和摆陀抬起移出画面，镜头推近摆轮、擒纵叉和擒纵轮，机芯以真实速度运转",
+      "camera": "从后盖上方出发 → 推近 → 停在摆轮与擒纵叉之间", "onscreen": ["28800 次/小时"], "evidence": ["F08", "F09"] },
+    { "id": "S03", "section": "擒纵", "lines": ["L016", "L017", "L018", "L019"], "pre": 0.3, "post": 1.0, "route": "R1",
+      "asset": "escapement", "source": "scenes/escapement/index.html",
+      "visual": "擒纵机构俯视，慢放 1/16：锁住 → 拨开走半齿 → 冲击补能 → 滴答",
+      "camera": "固定", "onscreen": ["擒纵轮", "擒纵叉", "半个齿计数", "推", "滴/答"], "evidence": ["F09", "F10", "F11"] }
+  ]
+}

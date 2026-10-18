@@ -13,6 +13,10 @@
 | 占位音 | `--engine placeholder` | 按字数生成提示音，没有 TTS 时先把画面和时间轴做出来 |
 | 用户自己录音 | 按 `L001.wav`… 的文件名放进 `audio/lines/` | 先把 `script.md` 发给用户照着念，每句之间停顿一秒，录完再切分 |
 
+**在 TLS 被代理重新签名的环境里**（公司代理、云端沙箱），edge-tts 会报 `CERTIFICATE_VERIFY_FAILED`。原因是它只信任 certifi 自带的证书。解决办法是把代理的 CA 追加到 edge-tts 所在 Python 环境的 certifi 文件里：`cat <代理CA.crt> >> $(python -c "import certifi;print(certifi.where())")`。只改自己的虚拟环境，不要关闭证书校验。
+
+**生成后先“听”一遍**：运行 `python3 scripts/check_tts.py <proj>`（需要 faster-whisper）。它会把每句配音转写回文字，和脚本对比，相似度低于 0.85 的句子会列出来。被标出的句子大多是同音字（比如擒纵→秦宗、机芯→鸡心），不一定是读错。逐句看一下，真正读错的才需要加 `<读作：…>` 重新生成。
+
 几点要求：
 - **全片只用一个音色**，语速保持一致。科普讲解用平静、清楚的讲述语气，不要用“营销腔”。
 - **读音要核对**：数字、英文缩写、专有名词（比如 M87*、Roadster、Transformer）。读错的句子用 `<读作：……>` 修正后，加 `--only L010 --force` 单独重新生成。
@@ -45,6 +49,7 @@ python3 scripts/timeline.py <proj>       # 读 storyboard.json 和 script.md，�
 ## 4. 背景音乐和卡点
 
 - **音乐要有授权**：无版权音乐库、用户提供的音乐，或者自己生成的音乐。在 `research/assets.md` 里登记来源（见 `rights.md`）。
+- **没有现成音乐时**，用 `python3 scripts/make_bed.py audio/bed.wav --seconds <总长> --mood calm|tension|bright` 合成一段简单的环境音床：慢速和弦铺底加低音，可以加轻微的节拍。它是从零合成的，不涉及授权问题，只适合垫在口播下面。
 - 默认把音量压到 0.22，有口播时自动再压低（sidechain ducking），整片响度统一到 −16 LUFS，适合网络平台。
 - **按节拍剪辑**（适合 MV 风格、开头和结尾、传播剪辑）：
   ```
@@ -57,6 +62,6 @@ python3 scripts/timeline.py <proj>       # 读 storyboard.json 和 script.md，�
 ## 5. 音效（可选）
 
 有零件咬合、按钮按下、地图上路线到站这类明确的动作时，可以加很轻的音效：
-- 音效来源要有授权，或者用 Web Audio 或 ffmpeg 合成简单音效；
-- 在 `storyboard.json` 对应镜头的 `notes` 里记下时间点；
-- 合成时作为第三条音轨混入（`assemble.py` 的混音部分可以照着扩展）。
+- 音效来源要有授权，或者自己合成（numpy 生成短促的噪声或正弦，或用 Web Audio、ffmpeg）。
+- **音效的时间点要从画面用的同一个模型算出来**。例如机械表的“滴答”就是 `movement(tau)` 里每次落齿的时刻，推进器的嘶声包络就是推力曲线。这样音画天然同步。示例见 `productions/watch/scenes/_shared/sfx.py` 和 `productions/roadster/scenes/_shared/sfx.py`。
+- 把音效做成一条和成片一样长的音轨，合成时加 `assemble.py --sfx audio/sfx.wav --sfx-volume 0.6`。

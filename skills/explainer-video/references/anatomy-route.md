@@ -54,6 +54,14 @@ git clone https://github.com/annnguyentt/anatomy-reveal-skill ~/.claude/skills/a
    - 它的模板只有一份 timeline。做多个镜头时，可以为每个镜头复制一份 `motion/` 目录（比如 `motion-S05/`），也可以每次渲染前替换 timeline，具体看它的 `motion/build.mjs` 支持哪种方式；
    - 渲染命令：`node motion/render.mjs blur …`，然后 `node motion/encode.mjs …`。把结果拷贝到 `scenes/<id>/clip.mp4`；
    - 它的短片没有声音，声音在 `assemble.py` 合成时统一加。
+   - **实测经验**（这两支样片踩过的坑）：
+     - 它的 `motion/render.mjs` 按位置取参数（`<模式> <a> <b> …选项`）。用 `blur` 模式时，第三个位置 `b` 用不到，但会吞掉紧跟在后面的参数。所以要先放一个占位符，再写选项：`node motion/render.mjs blur out/S05 _ --page motion/shots/S05.html --step 8 --most 6`。漏了占位符时，`--page` 会被静默忽略，渲染出来的是模板自带的示例物体。`stills` 和 `poses` 模式不受影响。
+     - 把一个镜头做成独立页面的做法：复制 `motion/build.mjs`，改成从 `--shot <file.mjs>` 读取 `make(shot)` 返回的 `{keys, labels}`（单位是秒），镜头时长和句子时间从 `audio/timeline.json` 读，再把模板 `timeline.mjs` 里关键帧以外的部分拼接进来。时长设成和 `BASE_DURATION` 相同，retimer 就不会改动时间。示例见 `productions/watch/scenes/_shared/movement/motion/build-shot.mjs`。
+     - 某个通道从片中才开始变化（比如 `apart` 只在第 15 秒拆开）时，必须在开始变化的那一帧上写一次“保持原值”的关键帧（`{ t: x0, apart: 0 }`），否则它会从 t=0 一路插值过来，车或表一开头就是拆开的。
+     - 不要把特性通道命名为 `yaw`、`pitch`、`roll`、`zoom` 等机位通道的名字，比如车轮转动不能叫 `roll`。
+     - 速度参考：在 4 核云容器上，1920×1080 的一个子帧大约 0.85 秒；三四个进程并行时，每个子帧约 1.5 秒。开 `--step 8 --most 6` 时，1 秒片段大约要 1–3 分钟。把镜头按 `--from`、`--to` 切成几段并行渲染，最后用 `encode.mjs` 一起编码（帧号是全局的）。
+     - 环境里没有 ImageMagick 7 的 `magick` 命令时，可以设置 `MAGICK=convert`，用 ImageMagick 6 代替，`encode.mjs` 用到的 `-evaluate-sequence mean` 两个版本都支持。
+     - 2D 场景需要同一个物体时（比如侧视图），用 `poses` 模式渲染两张：一张有物体，一张把物体平移出画面（`panX` 设一个很大的值）。用 `convert a.png b.png -compose difference -composite -colorspace gray -level 0,6%` 得到遮罩，就能抠出透明背景的贴图，和 3D 镜头的外观完全一致。
 4. **标注和角标**：anatomy 风格要求画面里尽量少字（最多一个刻印小标签）。零件名称、读数解释、证据角标放在镜头四角的卡片位置，或者用 R2 叠加层在合成前加上：用 `capture_frames.mjs` 渲染一个透明背景的 HTML 叠加层，再用 ffmpeg overlay 合进片段。字幕负责其余的说明。
 5. **额外交付可交互剖解页**：anatomy-reveal 的 `object/figure.html`，或者 anatomy 做的交互图。可以发到网上供观众自己拖动、拆解，很适合传播。
 6. **默认不画商标**，零件用通用名称标注（电池组、电机、推进器）。用户明确要求忠实复刻时，才画品牌标识，并提醒商标风险（见 `rights.md`）。

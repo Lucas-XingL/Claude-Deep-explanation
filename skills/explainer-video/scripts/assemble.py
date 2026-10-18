@@ -44,6 +44,8 @@ def main():
     ap.add_argument("--out", default="out/final.mp4")
     ap.add_argument("--bgm", default=None)
     ap.add_argument("--bgm-volume", type=float, default=0.22)
+    ap.add_argument("--sfx", default=None, help="a sound-effects track as long as the film (ticks, whooshes)")
+    ap.add_argument("--sfx-volume", type=float, default=0.6)
     ap.add_argument("--no-duck", action="store_true")
     ap.add_argument("--subs", choices=["burn", "soft", "none"], default="burn")
     ap.add_argument("--font", default="Noto Sans CJK SC")
@@ -114,6 +116,12 @@ def main():
     if a.bgm:
         inputs += ["-stream_loop", "-1", "-i", str(proj / a.bgm)]
     bgm_idx = 2 if have_narr else 1
+    sfx_idx = 1 + int(have_narr) + int(bool(a.bgm))
+    if a.sfx:
+        inputs += ["-i", str(proj / a.sfx)]
+        fc.append(f"[{sfx_idx}:a]aresample=48000,aformat=channel_layouts=stereo,volume={a.sfx_volume},apad,atrim=0:{total:.3f}[fx]")
+    fxin = "[fx]" if a.sfx else ""
+    nmix = lambda base: base + (1 if a.sfx else 0)
     if have_narr and a.bgm:
         fc.append(f"[1:a]aresample=48000,aformat=channel_layouts=stereo,asplit=2[nv][nsc]")
         fc.append(f"[{bgm_idx}:a]aresample=48000,aformat=channel_layouts=stereo,volume={a.bgm_volume}[m]")
@@ -121,12 +129,12 @@ def main():
             fc.append("[m]anull[md]")
         else:
             fc.append("[m][nsc]sidechaincompress=threshold=0.03:ratio=8:attack=30:release=500[md]")
-        fc.append(f"[nv][md]amix=inputs=2:normalize=0:duration=longest,atrim=0:{total:.3f},"
+        fc.append(f"[nv][md]{fxin}amix=inputs={nmix(2)}:normalize=0:duration=longest,atrim=0:{total:.3f},"
                   f"loudnorm=I={a.lufs}:TP=-1.5:LRA=11[aout]")
         amap = "[aout]"
     elif have_narr:
-        fc.append(f"[1:a]aresample=48000,aformat=channel_layouts=stereo,apad,atrim=0:{total:.3f},"
-                  f"loudnorm=I={a.lufs}:TP=-1.5:LRA=11[aout]")
+        fc.append(f"[1:a]aresample=48000,aformat=channel_layouts=stereo,apad,atrim=0:{total:.3f}[nv]")
+        fc.append(f"[nv]{fxin}amix=inputs={nmix(1)}:normalize=0:duration=first,loudnorm=I={a.lufs}:TP=-1.5:LRA=11[aout]")
         amap = "[aout]"
     elif a.bgm:
         fc.append(f"[1:a]aresample=48000,aformat=channel_layouts=stereo,volume={a.bgm_volume},atrim=0:{total:.3f},"

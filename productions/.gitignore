@@ -1,0 +1,9 @@
+# Generated outputs: rebuild them with the commands in each production's README.
+node_modules/
+out/
+check/
+audio/
+**/scenes/*/clip.mp4
+**/motion/shots/*.html
+**/motion/motion.html
+**/object/*.html

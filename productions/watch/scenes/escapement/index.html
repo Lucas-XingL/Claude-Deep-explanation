@@ -1,0 +1,275 @@
+<!doctype html>
+<!--
+  Swiss lever escapement, top view, on the same paper as the anatomy shots.
+  Driven by movement(tau) from ../_shared/model.js (the same model as the 3D movement).
+  Shot behaviour by window.SHOT.id via MODES below; line ids come from script.md.
+-->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../_shared/paper.css">
+</head>
+<body>
+<div class="mo" id="mo">
+  <div class="mo-bg"></div>
+  <canvas id="c"></canvas>
+  <div class="mo-vignette"></div>
+  <div class="mo-plate">
+    <span class="mo-corner" data-c="fig">Fig 2</span>
+    <span class="mo-corner" data-c="title">ANATOMY · 擒纵机构</span>
+    <span class="mo-corner" data-c="hint" id="hint">瑞士杠杆擒纵 · 俯视</span>
+    <span class="mo-corner" data-c="readout" id="readout"></span>
+  </div>
+</div>
+<script src="../_shared/model.js"></script>
+<script>
+const SCENE = window.SCENE || { width: 1920, height: 1080, fps: 30, duration: 22 };
+const SHOT = window.SHOT || { id: "S12", duration: 22, lines: [
+  { id: "L016", start: 0.3, end: 5.0 }, { id: "L017", start: 5.3, end: 11.2 }, { id: "L018", start: 11.5, end: 17.7 }, { id: "L019", start: 18.0, end: 22.0 } ] };
+const DURATION = SHOT.duration || SCENE.duration;
+const W = SCENE.width, H = SCENE.height;
+document.documentElement.style.setProperty("--mo-w", W + "px");
+document.documentElement.style.setProperty("--mo-h", H + "px");
+const cv = document.getElementById("c"); cv.width = W; cv.height = H;
+const g = cv.getContext("2d");
+const U = Math.min(W, H) / 1080;
+const PORTRAIT = H > W;
+
+const INK = "#2b2925", INK_SOFT = "rgba(43,41,37,.55)", STEEL = "#dfe1e4", STEEL_D = "#b9bdc3", GOLD = "#ead9a8", GOLD_D = "#c9ae6c",
+  RUBY = "#c2433a", RUBY_D = "#8e2a24", BLUE = "#3b5b8c", ACCENT = "#d9562f";
+const FONT = '"Noto Sans CJK SC","Source Han Sans SC","PingFang SC","Microsoft YaHei","WenQuanYi Zen Hei",sans-serif';
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = (k) => 1 - Math.pow(1 - k, 3);
+const line = (id) => SHOT.lines.find((l) => l.id === id);
+const atLine = (t, id, len = 0.6, lead = 0.15) => { const l = line(id); return l ? easeOut(seg(t, l.start - lead, l.start - lead + len)) : 0; };
+const during = (t, id) => { const l = line(id); return l ? seg(t, l.start - 0.2, l.start) * (1 - seg(t, l.end + 0.6, l.end + 1.0)) : 0; };
+
+// ---- Shot modes ---------------------------------------------------------------------------
+// slow: movement seconds per film second. tau0: where the movement starts.
+const MODES = {
+  default: { slow: 1 / 16, tau0: 0.02, labels: true },
+};
+const M = MODES[SHOT.id] || MODES.default;
+// Slower still while the impulse is explained (L018), so the push is visible; tau stays continuous.
+const slowAt = (t) => {
+  const l = SHOT.lines.find((x) => x.id === "L018");
+  if (!l) return M.slow;
+  const k = Math.min(1, Math.max(0, (t - (l.start - 0.8)) / 0.6)) * (1 - Math.min(1, Math.max(0, (t - (l.end + 0.2)) / 0.6)));
+  return M.slow * (1 - k) + (M.slow / 3) * k;
+};
+const tauAt = (t) => { let tau = M.tau0; const dt = 1 / 240; for (let s = 0; s < t; s += dt) tau += slowAt(s) * Math.min(dt, t - s); return tau; };
+
+// ---- Geometry (px, maths axes: y up; drawn with y flipped) ----------------------------------
+const Wt = WATCH;
+const R = 165 * U;                                   // escape wheel tip radius
+const NT = Wt.teeth.escape, PITCH = 360 / NT;         // 20 teeth, 18°
+const SPAN = PITCH * 1.75;                            // pallets embrace 3½ teeth: ±31.5° from the line of centres
+const D = R / Math.cos((SPAN * Math.PI) / 180);       // wheel centre to pallet arbor
+const LF = 2.0 * R;                                    // pallet arbor to fork notch
+const F = Wt.forkAngle, HALF = Wt.lift / 2;
+const RR = (LF * F) / HALF;                            // roller radius so the pin follows the notch
+const RB = 2.55 * R;                                   // balance rim radius
+const ox = PORTRAIT ? W * 0.5 - (D + LF + RR) * 0.0 : W * 0.5 - (D + LF + RR) * 0.62, oy = PORTRAIT ? H * 0.42 : H * 0.53;
+const E = [0, 0], P = [D, 0], C = [D + LF + RR, 0];
+const S = ([x, y]) => [ox + x, oy - y];
+const rot = ([x, y], a, [cx, cy] = [0, 0]) => { const c = Math.cos(a), s = Math.sin(a); const dx = x - cx, dy = y - cy; return [cx + dx * c - dy * s, cy + dx * s + dy * c]; };
+const rad = (d) => (d * Math.PI) / 180;
+const polar = (r, a, c = [0, 0]) => [c[0] + r * Math.cos(rad(a)), c[1] + r * Math.sin(rad(a))];
+
+// Pallet stones fixed in the fork frame: placed so that, locked in, each tip sits just inside the
+// tooth circle at ±SPAN; rotating the fork the other way lifts it clear (the motion is nearly radial).
+const DEPTH = 0.06 * R;
+const tipIn = { entry: polar(R - DEPTH, SPAN), exit: polar(R - DEPTH, -SPAN) };
+// Which fork rotation brings the entry stone in? Test numerically.
+const distE = (p) => Math.hypot(p[0], p[1]);
+const sIn = distE(rot(tipIn.entry, rad(F), P)) < distE(rot(tipIn.entry, rad(-F), P)) ? 1 : -1;
+// Stone tips in the fork frame (fork angle 0): entry is in at +sIn·F, exit at −sIn·F.
+const tip0 = { entry: rot(tipIn.entry, rad(-sIn * F), P), exit: rot(tipIn.exit, rad(sIn * F), P) };
+const forkAngle2D = (theta) => sIn * F * clamp(theta / HALF, -1, 1);  // entry locks while theta > 0
+const pinSign = -sIn;
+
+function polyPath(pts) { g.beginPath(); pts.forEach((p, i) => { const [x, y] = S(p); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath(); }
+function fillStroke(fill, stroke = INK, lw = 1.6) { g.fillStyle = fill; g.fill(); g.lineWidth = lw * U; g.strokeStyle = stroke; g.lineJoin = "round"; g.stroke(); }
+function circle(c, r, fill, stroke = INK, lw = 1.6) { const [x, y] = S(c); g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); fillStroke(fill, stroke, lw); }
+
+function drawEscapeWheel(angle, highlight) {
+  // Hub and four crossings
+  const rim = R * 0.8;
+  circle(E, rim, STEEL);
+  for (let i = 0; i < 4; i++) {
+    const a0 = angle + i * 90 + 14, a1 = angle + (i + 1) * 90 - 14;
+    g.beginPath();
+    const p0 = S(polar(R * 0.2, a0)), p1 = S(polar(rim - 9 * U, a0));
+    g.moveTo(...p0); g.lineTo(...p1);
+    const [cx, cy] = S(E);
+    g.arc(cx, cy, rim - 9 * U, -rad(a0), -rad(a1), true);
+    g.lineTo(...S(polar(R * 0.2, a1)));
+    g.arc(cx, cy, R * 0.2, -rad(a1), -rad(a0), false);
+    g.closePath(); g.fillStyle = "rgba(120,110,95,.22)"; g.fill(); g.lineWidth = 1.2 * U; g.strokeStyle = INK_SOFT; g.stroke();
+  }
+  // Club teeth: locking corner at the tip, impulse face sloping back (the wheel turns clockwise).
+  for (let i = 0; i < NT; i++) {
+    const a = angle + i * PITCH;
+    // Leading (locking) corner at angle a; the club's impulse face trails behind it.
+    const pts = [polar(rim - 2 * U, a + 1.5), polar(R, a), polar(R * 0.955, a + 5), polar(R * 0.9, a + 6.5), polar(rim - 2 * U, a + 10)];
+    polyPath(pts); fillStroke(highlight === i ? "#f3cdb9" : STEEL);
+  }
+  circle(E, R * 0.12, STEEL_D);
+  circle(E, R * 0.035, INK);
+}
+
+function drawFork(phi, glowImpulse) {
+  const a = rad(phi);
+  const T = (p) => rot(p, a, P);
+  // Lever body from the arbor to the notch, plus the two pallet arms.
+  const w = 0.07 * R;
+  polyPath([[D + 0.08 * R, -w], [D + LF - 0.18 * R, -w * 0.7], [D + LF - 0.18 * R, w * 0.7], [D + 0.08 * R, w]].map(T));
+  fillStroke(STEEL);
+  for (const k of ["entry", "exit"]) {
+    const tip = tip0[k];
+    const dir = [tip[0] - P[0], tip[1] - P[1]], n = Math.hypot(...dir);
+    const u = [dir[0] / n, dir[1] / n], v = [-u[1], u[0]];
+    const base = [P[0] + u[0] * 0.12 * R, P[1] + u[1] * 0.12 * R];
+    const end = [P[0] + u[0] * (n - 0.22 * R), P[1] + u[1] * (n - 0.22 * R)];
+    polyPath([[base[0] - v[0] * w, base[1] - v[1] * w], [end[0] - v[0] * w * 1.2, end[1] - v[1] * w * 1.2], [end[0] + v[0] * w * 1.2, end[1] + v[1] * w * 1.2], [base[0] + v[0] * w, base[1] + v[1] * w]].map(T));
+    fillStroke(STEEL);
+    // Ruby stone: a slim block whose inner end is the locking corner.
+    const sw = 0.055 * R, sl = 0.34 * R;
+    const back = [tip[0] - u[0] * sl, tip[1] - u[1] * sl];
+    polyPath([[back[0] - v[0] * sw, back[1] - v[1] * sw], [tip[0] - v[0] * sw, tip[1] - v[1] * sw], [tip[0] + v[0] * sw * 0.2, tip[1] + v[1] * sw * 0.2], [back[0] + v[0] * sw, back[1] + v[1] * sw]].map(T));
+    fillStroke(glowImpulse ? "#e0645a" : RUBY, RUBY_D, 1.4);
+  }
+  // Notch with horns at the far end.
+  const nx = D + LF;
+  for (const s of [-1, 1]) {
+    polyPath([[nx - 0.2 * R, s * 0.05 * R], [nx + 0.02 * R, s * 0.05 * R], [nx + 0.07 * R, s * 0.13 * R], [nx - 0.2 * R, s * 0.12 * R]].map(T));
+    fillStroke(STEEL);
+  }
+  circle(P, 0.1 * R, STEEL_D);
+  circle(P, 0.03 * R, INK);
+}
+
+function drawBalance(theta, below) {
+  const a = rad(theta);
+  if (below) {
+    // Rim and arms (gold) under the fork end.
+    const [cx, cy] = S(C);
+    g.beginPath(); g.arc(cx, cy, RB, 0, Math.PI * 2); g.arc(cx, cy, RB - 0.16 * R, 0, Math.PI * 2, true);
+    g.fillStyle = GOLD; g.fill("evenodd"); g.lineWidth = 1.6 * U; g.strokeStyle = INK; g.stroke();
+    for (let i = 0; i < 3; i++) {
+      const aa = a + (i * 2 * Math.PI) / 3 + 0.5;
+      const u = [Math.cos(aa), Math.sin(aa)], v = [-u[1], u[0]];
+      const r0 = 0.25 * R, r1 = RB - 0.15 * R, w = 0.05 * R;
+      polyPath([[C[0] + u[0] * r0 - v[0] * w, C[1] + u[1] * r0 - v[1] * w], [C[0] + u[0] * r1 - v[0] * w, C[1] + u[1] * r1 - v[1] * w], [C[0] + u[0] * r1 + v[0] * w, C[1] + u[1] * r1 + v[1] * w], [C[0] + u[0] * r0 + v[0] * w, C[1] + u[1] * r0 + v[1] * w]]);
+      fillStroke(GOLD);
+    }
+    // Timing screws
+    for (let i = 0; i < 8; i++) circle(polar(RB - 0.08 * R, theta + i * 45 + 22.5, C), 0.045 * R, GOLD_D, INK, 1.2);
+    // Hairspring: inner end turns with the balance, outer end fixed at the stud, so it breathes.
+    const N = 12, r0 = 0.3 * R, r1 = RB * 0.62;
+    g.beginPath();
+    for (let k = 0; k <= N * 90; k++) {
+      const f = k / (N * 90);
+      const ang = f * N * 2 * Math.PI + a * (1 - f) + 1.2;
+      const rr = r0 + (r1 - r0) * f;
+      const [x, y] = S([C[0] + rr * Math.cos(ang), C[1] + rr * Math.sin(ang)]);
+      k ? g.lineTo(x, y) : g.moveTo(x, y);
+    }
+    g.lineWidth = 1.5 * U; g.strokeStyle = BLUE; g.stroke();
+    circle(polar(r1, (N * 360 + 1.2 * 57.3) % 360, C), 0.06 * R, STEEL_D, INK, 1.2);
+    return;
+  }
+  // Roller with the impulse pin, above the fork.
+  circle(C, RR + 0.03 * R, STEEL);
+  const pin = polar(RR - 0.035 * R, 180 + pinSign * theta, C);
+  circle(pin, 0.045 * R, RUBY, RUBY_D, 1.3);
+  circle(C, 0.12 * R, GOLD_D);
+  circle(C, 0.035 * R, INK);
+}
+
+function label(text, at, k, { size = 34, color = INK, align = "left", sub = null } = {}) {
+  if (k <= 0) return;
+  const [x, y] = S(at);
+  g.save(); g.globalAlpha = k; g.fillStyle = color; g.textAlign = align; g.textBaseline = "middle";
+  g.font = `600 ${size * U}px ${FONT}`; g.fillText(text, x, y + (1 - k) * 10 * U);
+  if (sub) { g.font = `400 ${size * 0.62 * U}px ${FONT}`; g.fillStyle = INK_SOFT; g.fillText(sub, x, y + size * 0.95 * U + (1 - k) * 10 * U); }
+  g.restore();
+}
+function arrow(from, to, k, color = ACCENT) {
+  if (k <= 0) return;
+  const [x0, y0] = S(from), [x1, y1] = S(to);
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  g.save(); g.globalAlpha = k; g.strokeStyle = color; g.fillStyle = color; g.lineWidth = 4 * U; g.lineCap = "round";
+  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1 - Math.cos(a) * 14 * U, y1 - Math.sin(a) * 14 * U); g.stroke();
+  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - Math.cos(a - 0.45) * 22 * U, y1 - Math.sin(a - 0.45) * 22 * U); g.lineTo(x1 - Math.cos(a + 0.45) * 22 * U, y1 - Math.sin(a + 0.45) * 22 * U); g.closePath(); g.fill();
+  g.restore();
+}
+
+// Escape-wheel angle so that, between beats, a tooth tip rests on the locked stone.
+// movement().escape is −9° per beat; after an odd number of beats the entry stone locks at +SPAN.
+const wheelAngle = (m) => SPAN + DEPTH * 0 + PITCH / 2 + m.escape + 0.6;
+
+function draw(t) {
+  g.clearRect(0, 0, W, H);
+  const tau = tauAt(t);
+  const m = movement(tau);
+  const theta = m.balance;
+  const phi = forkAngle2D(theta);
+  const inLift = Math.abs(theta) < HALF;
+  const beatFrac = m.beats - Math.floor(m.beats);
+  const impulse = inLift && beatFrac > 0.2 && beatFrac < 0.8;
+
+  drawBalance(theta, true);
+  drawEscapeWheel(wheelAngle(m), null);
+  drawFork(phi, impulse && during(t, "L018") > 0.5);
+  drawBalance(theta, false);
+  // Banking pins limit the fork.
+  for (const s of [-1, 1]) circle(rot([D + 0.62 * R, s * (Math.tan(rad(F)) * 0.62 * R + 0.075 * R)], 0, P), 0.04 * R, STEEL_D, INK, 1.2);
+
+  // ---- Labels synced to the narration ----
+  if (M.labels) {
+    const k16 = atLine(t, "L016");
+    label("擒纵轮", [-R * 0.55, R * 1.32], k16, { sub: "20 齿" });
+    label("擒纵叉", [D + 0.35 * R, R * 1.32], atLine(t, "L016", 0.6, -0.9), { sub: "像一道闸门", align: "right" });
+    label("摆轮", [C[0] + RB * 0.78, RB * 0.92], atLine(t, "L011", 0.6) || atLine(t, "L017", 0.6), { sub: "每秒摆动 8 次" });
+    // Lock highlight while L016 is said: a ring on the locked stone.
+    const kLock = during(t, "L016") * (inLift ? 0 : 1);
+    if (kLock > 0) {
+      const lockedEntry = theta > 0;
+      const tip = rot(tip0[lockedEntry ? "entry" : "exit"], rad(phi), P);
+      const [x, y] = S(tip);
+      g.save(); g.globalAlpha = kLock; g.strokeStyle = ACCENT; g.lineWidth = 4 * U; g.beginPath(); g.arc(x, y, 0.2 * R, 0, Math.PI * 2); g.stroke(); g.restore();
+    }
+    // L017: half a tooth per swing — count the beats.
+    const k17 = atLine(t, "L017");
+    if (k17 > 0) {
+      const l17 = line("L017");
+      const n0 = movement(tauAt(l17.start)).beats;
+      const n = Math.max(0, m.beats - n0);
+      label(`${(Math.floor(n) * 0.5).toFixed(1)} 齿`, [-R * 0.55, -R * 1.45], k17, { size: 54, color: ACCENT, sub: "每摆一次，走半个齿" });
+    }
+    // L018: impulse arrows — wheel pushes the fork, fork pushes the balance.
+    const k18 = during(t, "L018") * (impulse ? 1 : 0.55);
+    if (k18 > 0) {
+      arrow(polar(R * 1.15, SPAN * 0.3), [D - 0.05 * R, R * 0.38], k18);
+      arrow([D + LF * 0.55, -R * 0.3], [C[0] - RR * 1.4, -R * 0.3], k18);
+      label("推", [D * 0.62, R * 0.62], k18, { size: 30, color: ACCENT });
+      label("推", [D + LF * 0.82, -R * 0.62], k18, { size: 30, color: ACCENT });
+    }
+    // L019: tick / tock at each drop.
+    const k19 = during(t, "L019");
+    if (k19 > 0 && beatFrac > 0.82 && beatFrac < 1 && inLift) {
+      const odd = Math.floor(m.beats) % 2;
+      label(odd ? "答" : "滴", [-R * 1.65, R * 0.15], k19, { size: 88, color: ACCENT, align: "center" });
+    }
+  }
+  document.getElementById("readout").textContent = `慢放 1/${Math.round(1 / slowAt(t))} · 节拍 ${Math.floor(m.beats)} · 摆轮 ${theta >= 0 ? "+" : "−"}${String(Math.abs(Math.round(theta))).padStart(3, "0")}°`;
+}
+
+window.renderFrame = (t) => draw(t);
+window.sceneReady = document.fonts.ready;
+if (!window.__seek) { const t0 = performance.now(); const loop = () => { draw(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); }; requestAnimationFrame(loop); } else draw(0);
+</script>
+</body>
+</html>

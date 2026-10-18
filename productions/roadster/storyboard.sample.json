@@ -1,0 +1,17 @@
+{
+  "meta": { "title": "Roadster · 样片", "width": 1920, "height": 1080, "fps": 30, "style": "style.json" },
+  "assets": {
+    "car": "scenes/_shared/car：中性外观的推进器跑车模型（Rocket 配置），104 个零件",
+    "thrust": "scenes/thrust：推力与重力的侧视图解，读数来自 scenes/_shared/model.js"
+  },
+  "shots": [
+    { "id": "S01", "section": "钩子", "lines": ["L001", "L002", "L003", "L004"], "pre": 0.5, "post": 0.4, "route": "R1", "asset": "car",
+      "source": "scenes/_shared/car/motion/shots/S01.html",
+      "visual": "车从远处驶来，轮子转动；说到“翻个身”时车离地翻转一周落地；L003 停在英雄镜头，角标“宣称”；L004 车身拆开，露出气瓶、喷口和风扇",
+      "camera": "从车头斜前方出发 → 跟随翻转 → 停在斜上方看拆开的车", "onscreen": ["宣称"], "evidence": ["F01", "F02", "F03"] },
+    { "id": "S02", "section": "推进器", "lines": ["L018", "L019"], "pre": 0.3, "post": 1.0, "route": "R3", "asset": "thrust",
+      "source": "scenes/thrust/index.html",
+      "visual": "侧视：车停在测力台上，推力条从 0 涨到 80 kN（宣称），越过 16.7 kN 重力线时车离地",
+      "camera": "固定", "onscreen": ["推力 kN", "重力 16.7 kN", "宣称", "估算"], "evidence": ["F13", "F14"] }
+  ]
+}
