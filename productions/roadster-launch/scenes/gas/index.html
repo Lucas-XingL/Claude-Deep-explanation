@@ -1,0 +1,230 @@
+<!doctype html>
+<!--
+  Fig 7 · how long can it fly: the gas account (S11). Left: the car's gas tank, one dot per kilogram
+  of gas (250 dots, the engineer's 250 kg, 宣称). Middle: the account, "每牛每秒 ≈ 1.5 克" (估算,
+  specific impulse 70 s). Right: the car hovering on its down nozzles (thrust = weight) and a hover
+  timer. The tank, the thrust and the timer all come from MODEL.hoverAt(τ) in ../_shared/model.js,
+  run in machine time τ at 3× (written in the corner). When the tank is empty the jets stop and the
+  car drops: about 10 s (估算). L020 adds the engineer's own "about 5 s" (宣称) on the time axis.
+-->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../_shared/paper.css">
+</head>
+<body>
+<div class="mo">
+  <div class="mo-bg"></div>
+  <canvas id="c"></canvas>
+  <div class="mo-vignette"></div>
+  <div class="mo-plate">
+    <span class="mo-corner" data-c="fig">Fig 7</span>
+    <span class="mo-corner" data-c="title">能飞多久 · 气量账</span>
+    <span class="mo-corner" data-c="hint" id="hint">理想情况 · 估算</span>
+    <span class="mo-corner" data-c="readout" id="readout"></span>
+  </div>
+</div>
+<script src="../_shared/model.js"></script>
+<script src="../thrust/car2d.js"></script>
+<script>
+const SCENE = window.SCENE || { width: 1920, height: 1080, fps: 30, duration: 21.29 };
+const SHOT = window.SHOT || { id: "S11", duration: 21.29, lines: [] };
+const DURATION = SHOT.duration || SCENE.duration;
+const W = SCENE.width, H = SCENE.height, U = Math.min(W / 1920, H / 1080);
+document.documentElement.style.setProperty("--mo-w", W + "px");
+document.documentElement.style.setProperty("--mo-h", H + "px");
+const cv = document.getElementById("c"); cv.width = W; cv.height = H;
+const g = cv.getContext("2d");
+const INK = "#1D1C1A", SOFT = "#6B675F", RULE = "#D8D2C4", ACCENT = "#E4572E", BLUE = "#2E86AB";
+const FONT = '"Noto Sans CJK SC","Source Han Sans SC","PingFang SC","Microsoft YaHei","WenQuanYi Zen Hei",sans-serif';
+const MONO = '"JetBrains Mono","DejaVu Sans Mono","WenQuanYi Zen Hei Mono",monospace';
+const { SP, toScreen, dirToScreen, drawCar, jet, arrow, cgMark, hash, clamp } = window.CAR2D;
+const M = window.MODEL;
+
+// ---- timing helpers (template: atLine / atWord / during) ----
+const SKIP = /[\s，。！？；：、,.!?;:“”"'（）()《》—…·-]/g;
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eo = (k) => 1 - Math.pow(1 - k, 3);
+const eio = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+const line = (id) => SHOT.lines.find((l) => l.id === id) || null;
+const wordAt = (id, phrase) => {
+  const l = line(id); if (!l) return null;
+  const p = phrase.replace(SKIP, "");
+  if (l.words && l.words.length) {
+    let s = ""; const at = [];
+    for (const w of l.words) { const cs = [...w.text.replace(SKIP, "")]; cs.forEach((c, k) => { s += c; at.push(w.start + (w.end - w.start) * k / cs.length); }); }
+    const k = s.indexOf(p); if (k >= 0) return at[[...s.slice(0, k)].length];
+  }
+  const txt = [...(l.text || "").replace(SKIP, "")], k = txt.join("").indexOf(p);
+  return k < 0 ? l.start : l.start + (l.end - l.start) * [...txt.join("").slice(0, k)].length / Math.max(1, txt.length);
+};
+const atLine = (t, id, len = 0.6, lead = 0.15) => { const l = line(id); return l ? eo(seg(t, l.start - lead, l.start - lead + len)) : 0; };
+const atWord = (t, id, phrase, len = 0.5, lead = 0.08) => { const w = wordAt(id, phrase); return w == null ? 0 : eo(seg(t, w - lead, w - lead + len)); };
+
+// ---- machine time: the hover runs at 3× from just before "悬停", then 1× for the drop ----
+const RATE = 3;
+const HOVER_T = M.hoverTime();                                   // s, ≈ 9.6 (估算)
+const T0 = (wordAt("L019", "悬停") ?? 11.4) - 0.25;              // valves open
+const TE = T0 + HOVER_T / RATE;                                  // tank empty
+const tauAt = (t) => (t <= T0 ? 0 : t <= TE ? RATE * (t - T0) : HOVER_T + (t - TE));
+const HOVER_H = 0.8;                                             // m above the ground (示意)
+
+// ---- drawing helpers ----
+function text(s, x, y, size, { color = INK, weight = 600, align = "left", font = FONT, alpha = 1 } = {}) {
+  if (alpha <= 0) return 0;
+  g.save(); g.globalAlpha = alpha; g.font = `${weight} ${size}px ${font}`; g.textAlign = align; g.textBaseline = "middle";
+  g.lineWidth = 6; g.strokeStyle = "rgba(241,236,226,.85)"; g.lineJoin = "round"; g.strokeText(s, x, y);
+  g.fillStyle = color; g.fillText(s, x, y); const w = g.measureText(s).width; g.restore(); return w;
+}
+const measure = (s, size, font = FONT, weight = 600) => { g.save(); g.font = `${weight} ${size}px ${font}`; const w = g.measureText(s).width; g.restore(); return w; };
+function badge(label, x, y, color, alpha = 1) {
+  if (alpha <= 0) return 0;
+  g.save(); g.globalAlpha = alpha; g.font = `600 24px ${FONT}`;
+  const w = g.measureText(label).width + 22, h = 38;
+  g.fillStyle = "rgba(244,241,234,.9)"; g.strokeStyle = color; g.lineWidth = 2;
+  g.beginPath(); g.roundRect(x, y - h / 2, w, h, 6); g.fill(); g.stroke();
+  g.fillStyle = color; g.textBaseline = "middle"; g.fillText(label, x + 11, y + 1); g.restore();
+  return w;
+}
+
+// ---- left: the tank, one dot per kilogram ----
+const TK = { x: 330, top: 250, bot: 680, r: 95 };
+const tankPath = () => { const p = new Path2D(); p.roundRect(TK.x - TK.r, TK.top, 2 * TK.r, TK.bot - TK.top, TK.r); return p; };
+const DOTS = (() => {                                            // fixed positions inside the capsule
+  const out = []; let i = 0;
+  while (out.length < M.massGas && i < 20000) {
+    const x = TK.x - TK.r + 14 + hash(i * 3.1 + 1) * (2 * TK.r - 28), y = TK.top + 14 + hash(i * 5.7 + 2) * (TK.bot - TK.top - 28); i++;
+    const dy = y < TK.top + TK.r ? TK.top + TK.r - y : y > TK.bot - TK.r ? y - (TK.bot - TK.r) : 0;
+    if (Math.hypot(x - TK.x, dy) < TK.r - 14) out.push([x, y, hash(i * 9.3)]);
+  }
+  return out;
+})();
+function tank(t, gas, k) {
+  if (k <= 0) return;
+  g.save(); g.globalAlpha = k;
+  const p = tankPath();
+  g.fillStyle = "#ebe6dc"; g.fill(p);
+  g.save(); g.clip(p); g.strokeStyle = "rgba(29,28,26,.08)"; g.lineWidth = 2;              // carbon-fibre wrap
+  for (let d = -400; d < 600; d += 22) { g.beginPath(); g.moveTo(TK.x - 200 + d, TK.top - 20); g.lineTo(TK.x + 200 + d, TK.top + 380); g.stroke(); g.beginPath(); g.moveTo(TK.x + 200 - d, TK.top - 20); g.lineTo(TK.x - 200 - d, TK.top + 380); g.stroke(); }
+  const n = Math.round(gas);
+  g.fillStyle = BLUE;
+  for (let i = 0; i < n && i < DOTS.length; i++) {
+    const [x, y, ph] = DOTS[i];
+    g.beginPath(); g.arc(x + 2.2 * Math.sin(t * 2.3 + ph * 40), y + 2.2 * Math.cos(t * 1.9 + ph * 31), 6, 0, Math.PI * 2); g.fill();
+  }
+  g.restore();
+  g.strokeStyle = INK; g.lineWidth = 3; g.stroke(p);
+  g.fillStyle = "#c9b98f"; g.fillRect(TK.x - 18, TK.top - 26, 36, 26); g.strokeRect(TK.x - 18, TK.top - 26, 36, 26);   // valve
+  g.restore();
+}
+
+// ---- right: the car on its down nozzles, and the timer ----
+const GY = 640, CAR_W = 420, K = CAR_W / SP.w, PXM = CAR_W / SP.len, CAR_X = 1480;
+const AX = { x0: 1180, y: 772, pxs: 50, max: 12 };              // time axis, px per second
+function carHeight(tau, t) {                                     // CG height above the wheels-on-ground state (m)
+  if (t <= T0) return 0;
+  if (tau <= HOVER_T) return HOVER_H * eio(clamp(tau / 1.2));
+  return Math.max(0, HOVER_H - 0.5 * 9.80665 * (tau - HOVER_T) ** 2);
+}
+
+function draw(t) {
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); g.setTransform(U, 0, 0, U, 0, 0);
+  const tau = tauAt(t), st = M.hoverAt(Math.min(tau, HOVER_T)), running = t > T0 && t < TE;
+  const gas = t <= T0 ? M.massGas : st.gas;
+  const W0 = (M.massCar + M.massGas) * 9.80665, Wnow = (M.massCar + gas) * 9.80665;
+
+  // left: tank
+  const kTank = atWord(t, "L018", "可气");
+  tank(t, gas, kTank);
+  text("车上气瓶", TK.x, 170, 32, { align: "center", alpha: kTank });
+  const k250 = atWord(t, "L019", "二百五十");
+  const w250 = measure(`约 ${M.massGas} kg`, 30);
+  text(`约 ${M.massGas} kg`, TK.x - 40, 212, 30, { align: "center", alpha: k250 });
+  badge("宣称", TK.x - 40 + w250 / 2 + 12, 212, ACCENT, k250);
+  text(`剩 ${Math.round(gas)} kg`, TK.x, 738, 44, { align: "center", font: MONO, weight: 700, color: running || t > TE ? BLUE : INK, alpha: k250 });
+  text("1 点 = 1 kg", TK.x, 792, 24, { align: "center", color: SOFT, weight: 500, alpha: k250 });
+
+  // middle: the account
+  const MX = 620;
+  const kIsp = atWord(t, "L018", "算下来");
+  const bw = badge("估算", MX, 248, BLUE, kIsp);
+  text(`按比冲 ${M.isp} s`, MX + bw + 12, 248, 26, { color: BLUE, weight: 500, alpha: kIsp });
+  const parts = [["每牛", "牛顿", INK], ["每秒", "秒", INK], [` ≈ ${M.gramsPerNs().toFixed(1)} 克`, "一点五克", ACCENT]];
+  let px = MX;
+  for (const [s, w, c] of parts) { text(s, px, 320, 60, { color: c, weight: 700, alpha: atWord(t, "L018", w) }); px += measure(s, 60, FONT, 700); }
+  text("推力 1 牛 · 喷 1 秒", MX, 382, 26, { color: SOFT, weight: 500, alpha: atWord(t, "L018", "一点五克") });
+  const kHov = clamp((t - (T0 - 0.35)) / 0.5);
+  const sh = M.hoverAt(Math.min(tau, HOVER_T - 0.02));            // last state while gas is left
+  text(`悬停推力 ≈ ${(sh.thrust / 1000).toFixed(0)} kN`, MX, 500, 36, { alpha: kHov * (t > TE ? 0.55 : 1) });
+  text(`每秒喷 ≈ ${Math.round(sh.mdot)} kg`, MX, 560, 36, { color: BLUE, weight: 700, alpha: kHov * (t > TE ? 0.55 : 1) });
+  // assumptions (估算, style.json showAssumptions), with "理想情况下"
+  const kAs = atWord(t, "L019", "理想");
+  const aw = badge("估算", MX, 660, BLUE, kAs);
+  text("假设", MX + aw + 12, 660, 28, { alpha: kAs });
+  [`车 ${M.massCar.toLocaleString("en")} kg`, `气 ${M.massGas} kg`, `比冲 ${M.isp} s`, "气全用完、全向下喷"].forEach((s, i) =>
+    text(s, MX + 6, 706 + i * 36, 26, { color: SOFT, weight: 500, alpha: kAs }));
+
+  // right: ground, car, jets, forces
+  const kCar = atLine(t, "L018", 0.8);
+  g.save(); g.globalAlpha = kCar; g.strokeStyle = INK; g.lineWidth = 2.5; g.beginPath(); g.moveTo(1150, GY); g.lineTo(1800, GY); g.stroke();
+  g.strokeStyle = SOFT; g.lineWidth = 1.4; for (let x = 1160; x < 1800; x += 24) { g.beginPath(); g.moveTo(x, GY); g.lineTo(x - 11, GY + 13); g.stroke(); }
+  g.restore();
+  const h = carHeight(tau, t);
+  const P = { X: CAR_X, Y: GY - (SP.cgH + h) * PXM, phi: 0, k: K, mirror: true, wheel: 0 };
+  for (const [i, pt] of [SP.downF, SP.downR].entries()) {
+    const E = toScreen(P, pt);
+    jet(g, E, [0, 1], { t, on: T0, off: TE, len: 120, w0: 16, seed: 11 + i * 23, U: 1, groundY: GY });
+  }
+  if (carImg.complete) drawCar(g, carImg, P, { alpha: kCar });
+  const C = toScreen(P, SP.cg), kOn = clamp((t - T0) / 0.06) * (1 - clamp((t - TE) / 0.06));
+  const Lw = 84 * Wnow / W0;                                     // weight arrow; thrust arrows sum to the same
+  arrow(g, C[0], C[1] + 16, C[0], C[1] + 16 + Lw, INK, 7, kHov, 24);
+  for (const pt of [SP.downF, SP.downR]) { const E = toScreen(P, pt); arrow(g, E[0], E[1], E[0], E[1] - (st.thrust / W0) * 84 / 2 * (t < TE ? 1 : 0), ACCENT, 7, kOn, 22); }
+  cgMark(g, C[0], C[1], 11, kHov);
+  text("推力 = 重力", CAR_X, 400, 30, { align: "center", color: ACCENT, weight: 700, alpha: kHov * (1 - seg(t, TE, TE + 0.3)) });
+  text("气用完，落地", CAR_X, 400, 30, { align: "center", weight: 700, alpha: seg(t, TE + 0.15, TE + 0.45) });
+
+  // timer
+  const kAx = kHov;
+  const elapsed = Math.min(tau, HOVER_T);
+  text("悬停计时", AX.x0, 228, 30, { alpha: kAx });
+  text(`${elapsed.toFixed(1)} s`, AX.x0, 296, 72, { font: MONO, weight: 700, color: t > TE ? ACCENT : INK, alpha: kAx });
+  g.save(); g.globalAlpha = kAx; g.strokeStyle = SOFT; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(AX.x0, AX.y); g.lineTo(AX.x0 + AX.max * AX.pxs, AX.y); g.stroke();
+  for (let s = 0; s <= AX.max; s++) { const x = AX.x0 + s * AX.pxs; g.beginPath(); g.moveTo(x, AX.y - (s % 5 ? 6 : 12)); g.lineTo(x, AX.y + (s % 5 ? 6 : 12)); g.stroke(); }
+  g.restore();
+  for (const s of [0, 5, 10]) text(`${s}`, AX.x0 + s * AX.pxs, AX.y + 34, 24, { align: "center", font: MONO, weight: 400, color: SOFT, alpha: kAx });
+  text("s", AX.x0 + AX.max * AX.pxs + 18, AX.y + 34, 24, { font: MONO, weight: 400, color: SOFT, alpha: kAx });
+  if (kAx > 0 && elapsed > 0) {
+    g.save(); g.globalAlpha = kAx; g.strokeStyle = ACCENT; g.lineWidth = 10; g.lineCap = "round";
+    g.beginPath(); g.moveTo(AX.x0, AX.y); g.lineTo(AX.x0 + elapsed * AX.pxs, AX.y); g.stroke();
+    g.fillStyle = ACCENT; g.beginPath(); g.arc(AX.x0 + elapsed * AX.pxs, AX.y, 11, 0, Math.PI * 2); g.fill(); g.restore();
+  }
+  const kEnd = seg(t, TE, TE + 0.4);
+  const lw = measure(`理想悬停 ≈ ${Math.round(HOVER_T)} 秒`, 30, FONT, 700);
+  const ex = Math.min(AX.x0 + HOVER_T * AX.pxs + 50, 1790) - lw - 84;
+  text(`理想悬停 ≈ ${Math.round(HOVER_T)} 秒`, ex, AX.y - 52, 30, { color: ACCENT, weight: 700, alpha: kEnd });
+  badge("估算", ex + lw + 12, AX.y - 52, BLUE, kEnd);
+  // L020: the engineer's own figure
+  const k5 = atWord(t, "L020", "五");
+  const x5 = AX.x0 + M.burnClaim * AX.pxs;
+  if (k5 > 0) {
+    g.save(); g.globalAlpha = k5; g.strokeStyle = INK; g.lineWidth = 3; g.setLineDash([7, 6]);
+    g.beginPath(); g.moveTo(x5, AX.y - 18); g.lineTo(x5, AX.y + 58); g.stroke(); g.restore();
+    g.save(); g.globalAlpha = k5; g.fillStyle = INK; g.beginPath(); g.moveTo(x5, AX.y - 14); g.lineTo(x5 - 11, AX.y - 32); g.lineTo(x5 + 11, AX.y - 32); g.closePath(); g.fill(); g.restore();
+  }
+  const l5 = `工程师说 ≈ ${M.burnClaim} 秒`, w5 = measure(l5, 30, FONT, 700);
+  text(l5, x5 - 20, AX.y + 82, 30, { weight: 700, alpha: k5 });
+  badge("宣称", x5 - 20 + w5 + 12, AX.y + 82, ACCENT, k5);
+
+  document.getElementById("readout").textContent = running ? `快放 ×${RATE}` : t > TE ? "气瓶已空" : "";
+}
+
+const carImg = new Image();
+carImg.src = "../_shared/car_side.png";
+window.sceneReady = Promise.all([document.fonts.ready, new Promise((r) => (carImg.complete ? r() : (carImg.onload = r)))]);
+window.renderFrame = (t) => draw(t);
+if (!window.__seek) { const t0 = performance.now(); const loop = () => { draw(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); }; requestAnimationFrame(loop); } else draw(0);
+</script>
+</body>
+</html>
