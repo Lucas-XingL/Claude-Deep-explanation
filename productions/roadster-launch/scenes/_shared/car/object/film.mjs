@@ -23,8 +23,8 @@ export const FIGURE = {
   caption: "{parts} 个零件；外形是示意，不对应任何品牌外观。",
 };
 
-// shell and hi* are the explainer's shot channels (end of file); default 0 leaves older shots as they were.
-export const FEATURE_DEFAULTS = { wheels: 0, fan: 0, skirt: 0, shell: 0, hiFan: 0, hiSkirt: 0, hiTank: 0, hiNozzle: 0 };
+// shell, hi* and ground are the explainer's shot channels (end of file); default 0 leaves older shots as they were.
+export const FEATURE_DEFAULTS = { wheels: 0, fan: 0, skirt: 0, shell: 0, hiFan: 0, hiSkirt: 0, hiTank: 0, hiNozzle: 0, ground: 0 };
 
 export const FEATURE_KEYS = [
   { key: "w", channel: "wheels", name: "wheels", unit: "°", step: 90, ease: 0.2, verb: "rolls the wheels" },
@@ -43,17 +43,20 @@ export function featureValues(s, values) {
 }
 
 export function featureTravel(a, b) {
-  return Math.max((Math.abs(b.wheels - a.wheels) * Math.PI * 355) / 180, (Math.abs(b.fan - a.fan) * Math.PI * 100) / 180, Math.abs(b.skirt - a.skirt) * 60, Math.abs((b.shell ?? 0) - (a.shell ?? 0)) * 950);
+  return Math.max((Math.abs(b.wheels - a.wheels) * Math.PI * 355) / 180, (Math.abs(b.fan - a.fan) * Math.PI * 100) / 180, Math.abs(b.skirt - a.skirt) * 60, Math.abs((b.shell ?? 0) - (a.shell ?? 0)) * 1100);
 }
 
 // ---- Explainer shots (productions/roadster-launch S04, S08, S13) ---------------------------------
-// shell 0…1: the body panels lift by shell × their explode travel; chassis, tanks and nozzles stay
-//   mounted (anatomy-route 5.3, max(apart, channel)).
+// shell 0…: each body panel moves along its explode direction by shell × its SHELL distance (mm);
+//   chassis, tanks, feed line and nozzles stay
+//   mounted (anatomy-route 5.3: max(apart, channel)). Values above 1 send the panels out of frame.
 // hiFan / hiSkirt / hiTank / hiNozzle above 0.5: those parts are repainted in the "signal" material
 //   (the accent), fan blades included.
+// ground 0…1: opacity of a soft contact shadow on the road plane (z = 0) under the car, drawn in the
+//   figure layer beneath every part, so a dropped skirt has a floor to meet.
 // Labels may set fig / title; hint / readout sit under them, out of the bottom 16 % subtitle band,
 //   and may hold "\n" for stacked lines.
-const SHELL = { roof: 950, rearwindow: 760, windshield: 760, deck: 850, hood: 820, "sideglass.R": 560, "sideglass.L": 560, "door.R": 700, "door.L": 700 };
+const SHELL = { roof: 950, rearwindow: 900, windshield: 900, deck: 850, hood: 820, "sideglass.R": 1100, "sideglass.L": 1100, "door.R": 700, "door.L": 700 };
 const HIGHLIGHT = { hiFan: /^fan\.\d\./, hiSkirt: /^skirt\./, hiTank: /^(tank|feed)\./, hiNozzle: /^nozzle\./ };
 const PLATE_CSS = `.mo .mo-corner[data-c="hint"],.mo .mo-corner[data-c="readout"]{top:34px;bottom:auto;font-family:"Noto Sans CJK SC","Source Han Sans SC","PingFang SC","WenQuanYi Zen Hei",sans-serif;font-size:15px;line-height:1.55;letter-spacing:.02em;text-transform:none;white-space:pre;color:rgba(29,28,26,.88);background:rgba(244,241,234,.82);padding:3px 7px}
 .mo .mo-corner[data-c="hint"]{left:8px}.mo .mo-corner[data-c="readout"]{right:8px;text-align:right}.mo .mo-corner:empty{display:none}
@@ -63,11 +66,11 @@ function dress(s) {
   const root = document.querySelector(".mo");
   if (!root) return;
   if (!LOOK) {
-    document.head.insertAdjacentHTML("beforeend", `<style>${PLATE_CSS}</style>`);
+    root.insertAdjacentHTML("beforeend", `<style>${PLATE_CSS}</style>`); // after look.css, so it wins
     const all = [...root.querySelectorAll(".iso-stage [data-name]")];
     LOOK = Object.fromEntries(Object.entries(HIGHLIGHT).map(([k, re]) => [k, all.filter((n) => re.test(n.dataset.name)).map((n) => [n, n.dataset.mat])]));
   }
-  for (const k in LOOK) {
+  for (const k in HIGHLIGHT) {
     const on = (s[k] ?? 0) > 0.5;
     for (const [n, mat] of LOOK[k]) if (n.hasAttribute("data-hl") !== on) {
       n.dataset.mat = on ? "signal" : mat;
@@ -78,4 +81,18 @@ function dress(s) {
     const el = root.querySelector(`.mo-corner[data-c="${c}"]`);
     if (s.label && s.label[c] !== undefined && el.textContent !== s.label[c]) el.textContent = s.label[c];
   }
+  const g = Math.max(0, Math.min(1, s.ground ?? 0));
+  if (!g && !LOOK.ground) return;
+  if (!LOOK.ground) {
+    const svg = root.querySelector(".iso-stage svg");
+    svg.insertAdjacentHTML("afterbegin", `<filter id="mo-ground" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${(DATA.basis.k * 120).toFixed(2)}"/></filter><path class="mo-ground" filter="url(#mo-ground)" fill="rgb(70,58,42)"/>`);
+    LOOK.ground = svg.querySelector(".mo-ground");
+  }
+  LOOK.ground.setAttribute("opacity", (0.4 * g).toFixed(3));
+  const M = orient(s.yaw, s.pitch, s.roll);
+  const ring = Array.from({ length: 48 }, (_, j) => {
+    const c = Math.cos((Math.PI * j) / 24), n = Math.sin((Math.PI * j) / 24);
+    return screenOf(about(M, [1000 * Math.sign(c) * Math.abs(c) ** 0.3, 2150 * Math.sign(n) * Math.abs(n) ** 0.3, 0])).map((v) => v.toFixed(2)).join(" ");
+  });
+  LOOK.ground.setAttribute("d", `M${ring.join("L")}Z`);
 }

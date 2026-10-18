@@ -1,0 +1,313 @@
+<!doctype html>
+<!--
+  Fig 6 · thrust, side elevation on paper. One scene for two shots, picked by SHOT.id:
+    S09  L014 the rear valve opens: the jet and the thrust arrow on the car appear together; the car
+         is pushed the other way. L015 the rear down nozzle's axis misses the CG (arm, 示意); it fires
+         and the car turns half a turn about the CG; a front down nozzle stops the turn; it lands.
+    S10  starts on S09's last frame. L016 bars: thrust > 80 kN (宣称) and weight ≈ 17 kN (估算).
+         L017 the down nozzles lift the car (thrust > weight) and it jumps five vehicles; the
+         camera follows. Numbers from ../_shared/model.js, motion from ./motion.js.
+  The car is the anatomy model's side sprite (../_shared/car_side.png).
+-->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../_shared/paper.css">
+</head>
+<body>
+<div class="mo">
+  <div class="mo-bg"></div>
+  <canvas id="c"></canvas>
+  <div class="mo-vignette"></div>
+  <div class="mo-plate">
+    <span class="mo-corner" data-c="fig">Fig 6</span>
+    <span class="mo-corner" data-c="title">推进器 · 反作用力</span>
+    <span class="mo-corner" data-c="hint" id="hint">侧视 · 示意，未按比例</span>
+    <span class="mo-corner" data-c="readout" id="readout"></span>
+  </div>
+</div>
+<script src="../_shared/model.js"></script>
+<script src="car2d.js"></script>
+<script src="motion.js"></script>
+<script>
+const SCENE = window.SCENE || { width: 1920, height: 1080, fps: 30, duration: 12.66 };
+const SHOT = window.SHOT || { id: "S09", duration: 12.66, lines: [] };
+const DURATION = SHOT.duration || SCENE.duration;
+const W = SCENE.width, H = SCENE.height, U = Math.min(W / 1920, H / 1080);
+document.documentElement.style.setProperty("--mo-w", W + "px");
+document.documentElement.style.setProperty("--mo-h", H + "px");
+const cv = document.getElementById("c"); cv.width = W; cv.height = H;
+const g = cv.getContext("2d");
+// style.json palette and type
+const INK = "#1D1C1A", SOFT = "#6B675F", RULE = "#D8D2C4", ACCENT = "#E4572E", BLUE = "#2E86AB";
+const FONT = '"Noto Sans CJK SC","Source Han Sans SC","PingFang SC","Microsoft YaHei","WenQuanYi Zen Hei",sans-serif';
+const MONO = '"JetBrains Mono","DejaVu Sans Mono","WenQuanYi Zen Hei Mono",monospace';
+const { SP, toScreen, dirToScreen, drawCar, jet, arrow, cgMark, clamp } = window.CAR2D;
+const M = window.MODEL;
+const MO = window.THRUST_MOTION(SHOT), T = MO.T;
+const IS10 = SHOT.id === "S10";
+const A = IS10 ? null : MO.s09(), B = IS10 ? MO.s10() : null;
+
+// ---- timing helpers (template: atLine / atWord / during) ----
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eo = (k) => 1 - Math.pow(1 - k, 3);
+const eio = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+const atLine = (t, id, len = 0.6, lead = 0.15) => { const l = T.line(id); return l ? eo(seg(t, l.start - lead, l.start - lead + len)) : 0; };
+const atWord = (t, id, phrase, len = 0.5, lead = 0.08) => { const w = T.wordAt(id, phrase); return w == null ? 0 : eo(seg(t, w - lead, w - lead + len)); };
+const onOff = (t, a, b, f = 0.06) => seg(t, a, a + f) * (1 - seg(t, b, b + f));   // jets and their arrows
+
+// ---- world → screen (design px, 1920×1080) ----
+const S = 120, YG = 860, CX = 960, K = S / SP.pxm;     // px per metre; ground line; px per sprite px
+const smax0 = (z, w) => (z <= -w ? 0 : z >= w ? z : (z + w) * (z + w) / (4 * w));
+function camX(t) {
+  if (!IS10) return 0;
+  const end = B.pose(DURATION + 5).x - 3.5;                      // stop with the car right of centre
+  const c = smax0(B.pose(t).x - 1.58, 1.5);                      // follow once the car passes 1.58 m
+  return end - smax0(end - c, 1.5);
+}
+const scr = (x, y, cx) => [CX + (x - cx) * S, YG - y * S];
+function carPose(t) {
+  const p = IS10 ? B.pose(t) : A.pose(t), cx = camX(t), [X, Y] = scr(p.x, p.y, cx);
+  return { ...p, X, Y, k: K, mirror: true, cx };
+}
+
+// ---- drawing helpers ----
+function text(s, x, y, size, { color = INK, weight = 600, align = "left", font = FONT, alpha = 1 } = {}) {
+  if (alpha <= 0) return;
+  g.save(); g.globalAlpha = alpha; g.font = `${weight} ${size}px ${font}`; g.textAlign = align; g.textBaseline = "middle";
+  g.lineWidth = 6; g.strokeStyle = "rgba(241,236,226,.85)"; g.lineJoin = "round"; g.strokeText(s, x, y);
+  g.fillStyle = color; g.fillText(s, x, y); g.restore();
+}
+function badge(label, x, y, color, alpha = 1) {             // evidence badge (style.json badges)
+  if (alpha <= 0) return 0;
+  g.save(); g.globalAlpha = alpha; g.font = `600 24px ${FONT}`;
+  const w = g.measureText(label).width + 22, h = 38;
+  g.fillStyle = "rgba(244,241,234,.9)"; g.strokeStyle = color; g.lineWidth = 2;
+  g.beginPath(); g.roundRect(x, y - h / 2, w, h, 6); g.fill(); g.stroke();
+  g.fillStyle = color; g.textBaseline = "middle"; g.fillText(label, x + 11, y + 1); g.restore();
+  return w;
+}
+function dashed(x0, y0, x1, y1, color, width, alpha, dash = [14, 10]) {
+  if (alpha <= 0) return;
+  g.save(); g.globalAlpha = alpha; g.strokeStyle = color; g.lineWidth = width; g.setLineDash(dash);
+  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); g.restore();
+}
+function leader(x0, y0, x1, y1, alpha) { dashed(x0, y0, x1, y1, SOFT, 2, alpha * 0.9, [4, 5]); }
+
+function ground(cx) {
+  g.save(); g.strokeStyle = INK; g.lineWidth = 2.5;
+  g.beginPath(); g.moveTo(40, YG); g.lineTo(1880, YG); g.stroke();
+  g.strokeStyle = SOFT; g.lineWidth = 1.4;                        // hatch fixed to the ground (a reference)
+  const x0 = Math.floor((cx - 9) / 0.25) * 0.25;
+  for (let x = x0; x < cx + 9; x += 0.25) { const X = CX + (x - cx) * S; if (X < 50 || X > 1875) continue; g.beginPath(); g.moveTo(X, YG); g.lineTo(X - 12, YG + 14); g.stroke(); }
+  g.restore();
+}
+function trail(from, to, poseAt, alpha) {                         // dotted path of the CG
+  if (alpha <= 0 || to <= from) return;
+  g.save(); g.globalAlpha = alpha; g.fillStyle = SOFT;
+  for (let s = from; s <= to; s += 0.12) { const p = carPose(s), cx = camX(to), [X, Y] = scr(p.x, p.y, cx); g.beginPath(); g.arc(X, Y, 3, 0, Math.PI * 2); g.fill(); }
+  g.restore();
+}
+function valve(P, open, alpha) {                                   // valve symbol on the rear line
+  if (alpha <= 0) return;
+  const [x, y] = toScreen(P, SP.rearValve), d = dirToScreen(P, [1, 0]), a = Math.atan2(d[1], d[0]);
+  g.save(); g.globalAlpha = alpha; g.translate(x, y); g.rotate(a);
+  g.fillStyle = "#F4F1EA"; g.strokeStyle = INK; g.lineWidth = 3;
+  g.beginPath(); g.moveTo(-16, -11); g.lineTo(16, 11); g.lineTo(16, -11); g.lineTo(-16, 11); g.closePath(); g.fill(); g.stroke();
+  g.rotate(open * Math.PI / 2); g.strokeStyle = open > 0.5 ? ACCENT : INK; g.lineWidth = 5;
+  g.beginPath(); g.moveTo(0, -18); g.lineTo(0, 18); g.stroke();
+  g.restore();
+}
+function ring(x, y, r, alpha) { if (alpha <= 0) return; g.save(); g.globalAlpha = alpha; g.strokeStyle = ACCENT; g.lineWidth = 3; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke(); g.restore(); }
+function turnArrow(x, y, sweep, alpha) {                          // clockwise turn about the CG
+  if (alpha <= 0 || sweep <= 0) return;
+  const r = 58, a0 = -Math.PI * 0.95, a1 = a0 + sweep * Math.PI * 1.45;
+  g.save(); g.globalAlpha = alpha; g.lineCap = "round";
+  for (const [c, w] of [["rgba(244,241,234,.9)", 11], [INK, 5]]) { g.strokeStyle = c; g.lineWidth = w; g.beginPath(); g.arc(x, y, r, a0, a1); g.stroke(); }
+  const hx = x + r * Math.cos(a1), hy = y + r * Math.sin(a1), ta = a1 + Math.PI / 2;
+  g.fillStyle = INK; g.beginPath(); g.moveTo(hx + Math.cos(ta) * 16, hy + Math.sin(ta) * 16);
+  g.lineTo(hx + Math.cos(ta + 2.5) * 16, hy + Math.sin(ta + 2.5) * 16); g.lineTo(hx + Math.cos(ta - 2.5) * 16, hy + Math.sin(ta - 2.5) * 16); g.closePath(); g.fill();
+  g.restore();
+}
+
+// Jets of the active shot, with the thrust arrow on the car (opposite to the gas, same instant).
+function jetsAndThrust(t, P, list, arrowLen, opts = {}) {
+  for (const j of list) {
+    const E = toScreen(P, j.pt), u = dirToScreen(P, j.dir);
+    const len = j.name === "rear" ? 330 : 230;
+    jet(g, E, u, { t, on: j.on, off: j.off, len, w0: 22, seed: j.name.length * 17.3, U: 1, groundY: YG });
+  }
+  return (t2) => {                                                // arrows drawn after the car
+    for (const j of list) {
+      const k = onOff(t2, j.on, j.off); if (k <= 0) continue;
+      const E = toScreen(P, j.pt), u = dirToScreen(P, j.dir), L = arrowLen(j);
+      arrow(g, E[0], E[1], E[0] - u[0] * L, E[1] - u[1] * L, ACCENT, 8, k, 30);
+    }
+  };
+}
+
+// ---- S09 overlays that S10 inherits (same geometry, so the cut matches) ----
+function s09Geometry(P, al) {
+  const C = toScreen(P, SP.cg), N = toScreen(P, SP.downR), u = dirToScreen(P, [0, 1]);
+  const foot = toScreen(P, [SP.downR[0], SP.cg[1]]);
+  if (al.axis > 0) {                                               // line of action of the rear down nozzle
+    const L0 = 330 * al.axisGrow, L1 = 260 * al.axisGrow;
+    let x0 = N[0] - u[0] * L0, y0 = N[1] - u[1] * L0, x1 = N[0] + u[0] * L1, y1 = N[1] + u[1] * L1;
+    const clipY = (xa, ya, xb, yb) => { if (yb <= YG - 4) return [xb, yb]; const f = (YG - 4 - ya) / (yb - ya); return [xa + (xb - xa) * f, YG - 4]; };
+    [x0, y0] = clipY(N[0], N[1], x0, y0); [x1, y1] = clipY(N[0], N[1], x1, y1);
+    dashed(x0, y0, x1, y1, ACCENT, 3, al.axis * 0.85);
+    text("作用线", x0 + 14, y0 + (y0 < N[1] ? 24 : -24), 26, { color: ACCENT, alpha: al.axisLbl });
+  }
+  if (al.arm > 0) {                                                // the arm: CG ⟂ line of action (示意)
+    const n = [u[0] * 16, u[1] * 16];
+    g.save(); g.globalAlpha = al.arm; g.strokeStyle = INK; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(C[0], C[1]); g.lineTo(C[0] + (foot[0] - C[0]) * al.armGrow, C[1] + (foot[1] - C[1]) * al.armGrow); g.stroke();
+    for (const Q of [C, foot]) { g.beginPath(); g.moveTo(Q[0] - n[0], Q[1] - n[1]); g.lineTo(Q[0] + n[0], Q[1] + n[1]); g.stroke(); }
+    g.restore();
+    const mx = (C[0] + foot[0]) / 2, my = (C[1] + foot[1]) / 2, side = u[1] > 0 ? -1 : 1;
+    const lx = mx - 60, ly = my + side * 62 + (side > 0 ? 40 : -40);
+    text("力臂", lx, ly, 30, { alpha: al.armLbl });
+    badge("示意", lx + 72, ly, SOFT, al.armLbl);
+  }
+  cgMark(g, C[0], C[1], 14, al.cg);
+  text("重心", C[0] - 92, C[1] - 40, 30, { alpha: al.cgLbl });
+  turnArrow(C[0], C[1], al.turn, al.turnA);
+}
+const END09 = { axis: 0.75, axisGrow: 1, axisLbl: 0, arm: 1, armGrow: 1, armLbl: 1, cg: 1, cgLbl: 1, turn: 1, turnA: 1 };
+
+// ---------------------------------------------------------------- S09
+function drawS09(t) {
+  const P = carPose(t), L15 = T.line("L015");
+  ground(0);
+  trail(0, t, null, 0.55 * (1 - seg(t, A.tLand, A.tLand + 0.5)));
+  const after = jetsAndThrust(t, P, A.jets, (j) => (j.name === "rear" ? 240 : 150));
+  drawCar(g, carImg, P);
+  // L014: valve, gas, thrust
+  const kValve = atWord(t, "L014", "阀门") * (1 - seg(t, A.tOff + 0.6, A.tOff + 1.2));
+  const open = eo(seg(t, A.tOpen - 0.05, A.tOpen + 0.15)) * (1 - seg(t, A.tOff, A.tOff + 0.2));
+  valve(P, open, kValve);
+  const V = toScreen(P, SP.rearValve), E = toScreen(P, SP.rearExit);
+  leader(V[0], V[1] - 60, V[0], V[1] - 22, kValve); text("阀门", V[0], V[1] - 84, 30, { align: "center", alpha: kValve });
+  const kGas = atWord(t, "L014", "气体") * (1 - seg(t, A.tOff, A.tOff + 0.5));
+  text("高速气体", E[0] + 120, E[1] - 74, 30, { color: BLUE, alpha: kGas });
+  const kPush = atWord(t, "L014", "反方向") * (1 - seg(t, A.tOff, A.tOff + 0.3));
+  text("推力", E[0] - 150, E[1] + 112, 34, { color: ACCENT, weight: 700, alpha: kPush });
+  leader(E[0] - 120, E[1] + 88, E[0] - 120, E[1] + 16, kPush);
+  // L015: nozzle, line of action, CG, arm, turn
+  const N = toScreen(P, SP.downR);
+  const kNoz = atWord(t, "L015", "喷口");
+  ring(N[0], N[1] - 6, 26, kNoz * (1 - seg(t, A.tSpin + A.d, A.tSpin + A.d + 0.6)));
+  const kNozL = kNoz * (1 - seg(t, A.tSpin + 0.6, A.tSpin + 1.1));
+  text("喷口", N[0] + 40, N[1] - 50, 30, { alpha: kNozL });
+  const wCG = T.wordAt("L015", "重心");
+  const al = {
+    axis: kNoz * (1 - 0.25 * seg(t, A.tLand, A.tLand + 0.5)), axisGrow: eio(seg(t, T.wordAt("L015", "不对") - 0.1, T.wordAt("L015", "不对") + 0.6)),
+    axisLbl: atWord(t, "L015", "不对") * (1 - seg(t, A.tSpin + 0.6, A.tSpin + 1.1)),
+    cg: atWord(t, "L015", "重心", 0.35), cgLbl: atWord(t, "L015", "重心"),
+    arm: seg(t, wCG + 0.3, wCG + 0.5), armGrow: eio(seg(t, wCG + 0.3, wCG + 0.8)), armLbl: eo(seg(t, wCG + 0.6, wCG + 1.0)),
+    turn: eio(seg(t, T.wordAt("L015", "转") - 0.1, T.wordAt("L015", "转") + 0.7)), turnA: 1,
+  };
+  s09Geometry(P, al);
+  after(t);
+  // the stop: a short burst from the front down nozzle
+  const F = toScreen(P, SP.downF), kStop = onOff(t, A.tStop - A.d, A.tStop, 0.15);
+  text("反向喷，停转", F[0] + 30, F[1] + 54, 26, { color: ACCENT, alpha: kStop });
+  const deg = Math.round((A.theta(t) * 180) / Math.PI);
+  document.getElementById("readout").textContent = t < A.tSpin - 0.3 ? (open > 0.5 ? "阀门 开 · 喷气" : "阀门 关") : `转角 ${deg}°`;
+}
+
+// ---------------------------------------------------------------- S10
+const KN = 4.78;                                       // px per kN on the bar chart
+const BX = 270, BY1 = 236, BY2 = 336;
+function bars(t) {
+  const Tc = M.thrustClaim / 1000, Wk = M.weight() / 1000;
+  const kT = atWord(t, "L016", "推力"), gT = eio(seg(t, T.wordAt("L016", "八万") - 0.25, T.wordAt("L016", "八万") + 0.35));
+  const kW = atWord(t, "L016", "车重"), gW = eio(seg(t, T.wordAt("L016", "车重"), T.wordAt("L016", "一万七千") + 0.2));
+  const kWv = atWord(t, "L016", "一万七千");
+  // axis
+  const kAx = Math.max(kT, 0);
+  g.save(); g.globalAlpha = kAx; g.strokeStyle = SOFT; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(BX, 392); g.lineTo(BX + 90 * KN, 392); g.stroke();
+  for (let v = 0; v <= 80; v += 20) { g.beginPath(); g.moveTo(BX + v * KN, 392); g.lineTo(BX + v * KN, 402); g.stroke(); text(`${v}`, BX + v * KN, 422, 22, { align: "center", font: MONO, weight: 400, color: SOFT, alpha: kAx }); }
+  text("kN", BX + 90 * KN + 8, 422, 22, { font: MONO, weight: 400, color: SOFT, alpha: kAx });
+  g.restore();
+  // thrust (claim)
+  text("推力", 150, BY1, 32, { alpha: kT });
+  g.save(); g.globalAlpha = kT; g.fillStyle = ACCENT; g.fillRect(BX, BY1 - 26, Tc * KN * gT, 52);
+  g.strokeStyle = ACCENT; g.lineWidth = 2; g.strokeRect(BX, BY1 - 26, Tc * KN * gT, 52); g.restore();
+  const kTv = atWord(t, "L016", "八万");
+  for (let j = 0; j < 3; j++) text("›", BX + Tc * KN + 10 + j * 14, BY1, 34, { color: ACCENT, alpha: kTv * (0.8 - j * 0.25) });   // "more than"
+  text("> 80 kN", BX + Tc * KN + 58, BY1, 34, { color: ACCENT, font: MONO, weight: 700, alpha: kTv });
+  badge("宣称", BX + Tc * KN + 230, BY1, ACCENT, kTv);
+  // weight (estimate)
+  text("车重", 150, BY2, 32, { alpha: kW });
+  g.save(); g.globalAlpha = kW; g.fillStyle = INK; g.fillRect(BX, BY2 - 26, Wk * KN * gW, 52); g.restore();
+  text(`≈ ${Math.round(Wk)} kN`, BX + Wk * KN + 18, BY2, 34, { font: MONO, weight: 700, alpha: kWv });
+  const bw = badge("估算", BX + Wk * KN + 172, BY2, BLUE, kWv);
+  text(`${M.massCar.toLocaleString("en")} kg × g`, BX + Wk * KN + 184 + bw, BY2, 24, { color: BLUE, weight: 500, alpha: kWv });
+  dashed(BX + Wk * KN, BY1 - 40, BX + Wk * KN, BY2 + 26, INK, 2.5, kWv, [8, 6]);
+  // L017: thrust over weight
+  const kR = atWord(t, "L017", "大过");
+  if (kR > 0) {
+    const x0 = BX + Wk * KN, x1 = BX + Tc * KN;
+    g.save(); g.globalAlpha = kR; g.strokeStyle = ACCENT; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(x0, BY1 - 38); g.lineTo(x0, BY1 - 48); g.lineTo(x0 + (x1 - x0) * kR, BY1 - 48); g.lineTo(x0 + (x1 - x0) * kR, BY1 - 38); g.stroke(); g.restore();
+    text(`≈ ${M.thrustToWeight().toFixed(1)} 倍车重`, (x0 + x1) / 2, BY1 - 76, 30, { color: ACCENT, weight: 700, align: "center", alpha: kR });
+  }
+}
+function vehicle(v, cx, alpha) {
+  const L = CX + (v.x - cx) * S, R = L + v.w * S, w = v.w * S; if (R < 0 || L > 1920) return;
+  const y = (m) => YG - m * S, X = (f) => L + f * w;
+  g.save(); g.globalAlpha = alpha; g.lineJoin = "round";
+  const body = "#cfc8ba", glass = "#e8e3d8", tyre = "#45423d";
+  g.fillStyle = tyre; for (const f of [0.02, 0.86]) g.fillRect(X(f), y(0.62), w * 0.12, 0.62 * S);
+  const shapes = {
+    sedan: [[0, .3], [0, .82], [.08, .95], [.2, 1.42], [.8, 1.42], [.92, .95], [1, .82], [1, .3]],
+    small: [[0, .3], [0, .8], [.1, .95], [.24, 1.4], [.76, 1.4], [.9, .95], [1, .8], [1, .3]],
+    suv: [[0, .32], [0, 1.0], [.07, 1.12], [.16, 1.66], [.84, 1.66], [.93, 1.12], [1, 1.0], [1, .32]],
+    pickup: [[0, .38], [0, 1.18], [.05, 1.28], [.14, 1.92], [.86, 1.92], [.95, 1.28], [1, 1.18], [1, .38]],
+    semi: [[.02, .45], [.02, 3.0], [.08, 3.5], [.92, 3.5], [.98, 3.0], [.98, .45]],
+  };
+  const pts = shapes[v.kind];
+  g.fillStyle = body; g.strokeStyle = SOFT; g.lineWidth = 2;
+  g.beginPath(); pts.forEach(([f, h], i) => (i ? g.lineTo(X(f), y(h)) : g.moveTo(X(f), y(h)))); g.closePath(); g.fill(); g.stroke();
+  const gl = { sedan: [.95, 1.34, .22], small: [.95, 1.32, .26], suv: [1.12, 1.58, .18], pickup: [1.28, 1.84, .17], semi: [2.3, 3.2, .1] }[v.kind];
+  g.fillStyle = glass; g.beginPath(); g.moveTo(X(gl[2] - .06), y(gl[0])); g.lineTo(X(gl[2]), y(gl[1])); g.lineTo(X(1 - gl[2]), y(gl[1])); g.lineTo(X(1.06 - gl[2]), y(gl[0])); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = SOFT; for (const f of [0.1, 0.78]) g.fillRect(X(f), y(v.kind === "semi" ? 0.95 : 0.7), w * 0.12, 0.08 * S);   // lamps
+  if (v.kind === "semi") { g.fillStyle = "#bdb6a8"; g.fillRect(X(.12), y(1.7), w * .76, .9 * S); g.strokeRect(X(.12), y(1.7), w * .76, .9 * S); }
+  g.restore();
+}
+function drawS10(t) {
+  const P = carPose(t), cx = P.cx;
+  ground(cx);
+  for (const v of B.vehicles) vehicle(v, cx, 1);
+  trail(B.tFire, t, null, 0.55);
+  const after = jetsAndThrust(t, P, B.jets, () => 0.5 * B.r * 92);
+  drawCar(g, carImg, P);
+  // S09's last frame, then its marks clear away (the CG stays)
+  const fade = 1 - seg(t, 0.25, 0.9);
+  s09Geometry(P, { ...END09, axis: END09.axis * fade, arm: fade, armLbl: fade, cgLbl: END09.cgLbl * (1 - seg(t, 0.25, 0.9)), turnA: fade });
+  // weight on the car, from "车重"
+  const C = toScreen(P, SP.cg), kG = atWord(t, "L016", "车重");
+  arrow(g, C[0], C[1] + 18, C[0], C[1] + 18 + 92, INK, 8, kG, 28);
+  text("重力", C[0] + 22, C[1] + 92, 28, { alpha: kG });
+  const kUp = onOff(t, B.jets[0].on, B.jets[0].off);
+  text("推力", toScreen(P, SP.downR)[0] + 24, C[1] - 70, 28, { color: ACCENT, weight: 700, alpha: kUp });
+  after(t);
+  bars(t);
+  const deg = 180, ro = document.getElementById("readout");
+  ro.textContent = t < 0.9 ? `转角 ${deg}°` : P.landed ? "落地" : P.y > SP.cgH + 0.01 ? "离地" : t > B.tGo ? "加速" : "";
+}
+
+const carImg = new Image();
+carImg.src = "../_shared/car_side.png";
+window.sceneReady = Promise.all([document.fonts.ready, new Promise((r) => (carImg.complete ? r() : (carImg.onload = r)))]);
+function draw(t) {
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); g.setTransform(U, 0, 0, U, 0, 0);
+  (IS10 ? drawS10 : drawS09)(t);
+}
+window.renderFrame = (t) => draw(t);
+if (!window.__seek) { const t0 = performance.now(); const loop = () => { draw(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); }; requestAnimationFrame(loop); } else draw(0);
+</script>
+</body>
+</html>

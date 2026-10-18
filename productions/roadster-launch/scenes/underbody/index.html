@@ -1,0 +1,41 @@
+<!doctype html>
+<!--
+  Underbody section (Fig 4), one scene for three continuous shots, chosen by SHOT.id:
+    S05 (L007)        fan pulls the air out from under the car → fewer dots, lower reading;
+                      roof arrows stay, underbody arrows shorten, the difference becomes the suction arrow.
+    S06 (L008, L009)  the whole section turns over 180° onto the ramp ceiling; weight from the centre
+                      of mass, suction toward the ceiling grows past it, ceiling pushes on the tyres;
+                      then the pressure drop that is needed (估算, area 6 m²) ≈ 3 % of the atmosphere.
+    S07 (L010, L011)  three bars (needed / engineer / on-screen); the car leaves the ceiling, the
+                      skirts leak, air rushes in, suction goes to zero, the model no longer applies.
+  Each shot starts exactly where the previous one ends. Every number comes from ../_shared/model.js;
+  every appearance is tied to a spoken word (atWord). Drawing depends on t only.
+-->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../_shared/paper.css">
+</head>
+<body>
+<div class="mo">
+  <div class="mo-bg"></div>
+  <canvas id="c"></canvas>
+  <div class="mo-vignette"></div>
+  <div class="mo-plate">
+    <span class="mo-corner" data-c="fig">Fig 4</span>
+    <span class="mo-corner" data-c="title">车底剖面 · 风扇吸地</span>
+  </div>
+</div>
+<script src="../_shared/model.js"></script>
+<script src="geom.js"></script>
+<script src="draw.js"></script>
+<script>
+const SCENE = window.SCENE || { width: 1920, height: 1080, fps: 30, duration: 7.224 };
+const SHOT = window.SHOT || { id: "S05", duration: 7.224, lines: [{ id: "L007", start: 0.2, end: 6.82, text: "风扇抽走车底的空气，车底气压变低，外面的大气就把车按向路面。" }] };
+const UB = window.UNDERBODY(SCENE, SHOT);
+window.sceneReady = UB.ready;
+window.renderFrame = (t) => UB.draw(t);
+if (!window.__seek) { const t0 = performance.now(); const loop = () => { UB.draw(((performance.now() - t0) / 1000) % UB.duration); requestAnimationFrame(loop); }; requestAnimationFrame(loop); } else UB.draw(0);
+</script>
+</body>
+</html>

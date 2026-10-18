@@ -22,3 +22,5 @@ out/
 # HyperFrames scratch written next to the clip while it renders
 **/scenes/*/.*.hf-transaction-*/
 **/scenes/*/work-*-*/
+# Stills that render_shot.sh --stills-only writes next to the clip
+**/scenes/*/stills/

@@ -183,13 +183,13 @@ export function buildObject(T, { layer }) {
 
   // ---- Cockpit ----------------------------------------------------------------------------------
   const W0 = [995, 768], W1 = [275, 1128];
-  const ws = assembly("windshield", [0, 0.4, 1], 760, 0.01);
+  const ws = assembly("windshield", [0, 0.4, 1], 900, 0.01); // was 760: the hood caught it up
   prismX("windshield", ws, slab(W1, W0, 16).reverse(), -640, 640, { material: "glass", tone: "hi", crease: "faint" });
   for (const s of sides) prismX(`pillar.${sideName(s)}`, ws, slab(W1, W0, 22).reverse(), Math.min(s * 640, s * 690), Math.max(s * 640, s * 690), { material: PAINT, tone: "hi" });
   const roofG = assembly("roof", AX.z, 950, 0);
   prismZ("roof", roofG, rrect(-600, -350, 600, 265, 40), 1128, 1150, { material: "rubber", tone: "hi" });
   const R0 = [-350, 1128], R1 = [-1100, 822];
-  const rw = assembly("rearwindow", [0, -0.4, 1], 760, 0.01);
+  const rw = assembly("rearwindow", [0, -0.4, 1], 900, 0.01); // was 760: the deck caught it up
   prismX("rearwindow", rw, slab(R0, R1, 16).reverse(), -620, 620, { material: "glass", tone: "hi", crease: "faint" });
   for (const s of sides) {
     const g = assembly(`sideglass.${sideName(s)}`, [s, 0, 0.3], 560, 0.02);
@@ -207,7 +207,7 @@ export function buildObject(T, { layer }) {
 
   // ---- Cold-gas system ----------------------------------------------------------------------------
   // 400 L composite tank where the passenger seat would be (axis along y).
-  const tankP = assembly("tank.passenger", AX.z, 1000, 0.1); // was 1250: rose through the roof and windshield
+  const tankP = assembly("tank.passenger", AX.z, 800, 0.1); // was 1250: rose through the roof and windshield
   {
     const o = [330, 0, 560];
     roundAlong("tank.passenger.body", tankP, AX.y, o, -300, 640, 270, { material: "gunmetal", tone: "hi", details: { seams: [-150, 0, 150, 300, 450], rules: [] } });
@@ -264,7 +264,8 @@ export function buildObject(T, { layer }) {
   const fasG = assembly("fascia", [0, -1, 0.25], 780, 0.04);
   const fas = prismX("fascia", fasG, [[-2130, 400], [-1950, 400], [-1950, 660], [-2130, 660]], -C.xIn, C.xIn, { material: PAINT, tone: "hi" });
   plane(fas, [0, -2130.5, 620], [-1, 0, 0], [0, 0, -1], `<rect x="-660" y="-10" width="1320" height="20" rx="10" style="fill:#d9563a;stroke:#6d2a1c;stroke-width:2"/>`, NY);
-  prismZ("diffuser", core, rrect(-680, -2130, 680, -1600, 30), 110, 140, { material: "gunmetal", tone: "hi" });
+  // Ends at y −1830 (was −1600) so the rear down nozzles drop past it when the car comes apart.
+  prismZ("diffuser", core, rrect(-680, -2130, 680, -1830, 30), 110, 140, { material: "gunmetal", tone: "hi" });
   const fansG = assembly("fans", NY, 900, 0.1);
   for (const [i, x] of [-480, -160, 160, 480].entries()) {
     const g = hinge(`fan.${i}`, fansG, [x, -2080, 262], AX.y);
