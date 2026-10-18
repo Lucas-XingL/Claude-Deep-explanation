@@ -41,7 +41,7 @@
     const alpha = Math.PI / (d * (d / 2 + coast + d2 / 2));         // rad/s² during the burst (示意 time)
     const w1 = alpha * d, alpha2 = w1 / d2;                         // counter-burst brings the spin to 0
     const tLand = T.wordAt("L015", "翻身") + 0.95;
-    const y0 = 4.0, DX = 2.3;                                       // CG height at t=0; drift before landing
+    const y0 = 3.7, DX = 2.3;                                       // CG height at t=0; drift before landing
     const Tb = tOff - tOpen, a = DX / (0.5 * Tb * Tb + Tb * (tLand - tOff)), vLand = a * Tb;
     const slideT = 0.35, slide = vLand * slideT / 2;
     const X0 = X_LAND + DX + slide;
