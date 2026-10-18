@@ -10,7 +10,9 @@ in="${1:?video}"; out="${2:?output dir}"; every="${3:-5}"; cols="${4:-3}"; rows=
 mkdir -p "$out"
 font=$(fc-match -f '%{file}' 'DejaVu Sans' 2>/dev/null || true)
 ff=""; [ -n "$font" ] && ff=":fontfile='$font'"
-ffmpeg -v error -y -i "$in" -vf "fps=1/${every},scale=640:-2,drawtext=text='%{pts\:hms}':x=6:y=6:fontsize=22:fontcolor=yellow:box=1:boxcolor=black@0.7${ff},tile=${cols}x${rows}" "$out/sheet_%02d.jpg"
+# select (not fps=): fps re-times the frames it keeps, so a tile stamped 00:10 could show 00:12.5.
+# select keeps each frame's own time, so the stamp is the moment the tile really shows.
+ffmpeg -v error -y -i "$in" -vf "select='isnan(prev_selected_t)+gte(t-prev_selected_t\\,${every})',scale=640:-2,drawtext=text='%{pts\:hms}':x=6:y=6:fontsize=22:fontcolor=yellow:box=1:boxcolor=black@0.7${ff},tile=${cols}x${rows}" -fps_mode passthrough "$out/sheet_%02d.jpg"
 ls "$out"/sheet_*.jpg
 
 echo "--- duration"
